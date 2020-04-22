@@ -20,9 +20,11 @@ jobs:
         include:
         - laravel: 7.*
           php: 7.4
+          phpunit: 9.0
           dependency-version: prefer-stable
         - laravel: 6.*
           php: 7.3
+          phpunit: 9.0
           dependency-version: prefer-stable
         - laravel: 7.*
           php: 7.2

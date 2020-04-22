@@ -31,7 +31,11 @@ jobs:
       uses: actions/checkout@v2
 
     - name: Install Librdkafka
-      run: sudo apt-get install librdkafka-dev
+      run: |
+        wget -qO - https://packages.confluent.io/deb/5.4/archive.key | sudo apt-key add -
+        sudo add-apt-repository "deb [arch=amd64] https://packages.confluent.io/deb/5.4 stable main"
+        sudo apt-get update
+        sudo apt-get install librdkafka-dev
 
     - name: Setup PHP
       uses: shivammathur/setup-php@v2

@@ -13,8 +13,9 @@ jobs:
 
     strategy:
       matrix:
-        php: [7.4, 7.3, 7.2]
+        php: [7.4, 7.3]
         laravel: [7.*]
+        phpunit: [9.*]
         dependency-version: [prefer-lowest, prefer-stable]
         include:
         - laravel: 7.*
@@ -23,8 +24,12 @@ jobs:
         - laravel: 6.*
           php: 7.3
           dependency-version: prefer-stable
+        - laravel: 7.*
+          php: 7.2
+          phpunit: 8.*
+          dependency-version: prefer-stable
 
-    name: P${{ matrix.php }} - L${{ matrix.laravel }} - ${{ matrix.dependency-version }} - ${{ matrix.os }}
+    name: P${{ matrix.php }} - L${{ matrix.laravel }} - ${{ matrix.dependency-version }}
 
     steps:
     - name: Checkout code
@@ -48,7 +53,7 @@ jobs:
     - name: Install dependencies
       run: |
         composer remove phpro/grumphp --no-interaction --no-update --dev
-        composer require "laravel/framework:${{ matrix.laravel }}" --no-interaction --no-update
+        composer require "laravel/framework:${{ matrix.laravel }}" "phpunit/phpunit:${{ matrix.phpunit }}" --no-interaction --no-update
         composer update --${{ matrix.dependency-version }} --prefer-dist --no-interaction --no-suggest
 
     - name: Execute Unit Tests

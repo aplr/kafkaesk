@@ -4,11 +4,11 @@ on:
   push:
   pull_request:
   schedule:
-    - 0 5 * * *
+  - cron: '0 4 * * *'
 
 jobs:
-  php-tests:
-
+  test:
+    
     runs-on: ubuntu-latest
 
     strategy:
@@ -17,12 +17,12 @@ jobs:
         laravel: [7.*]
         dependency-version: [prefer-lowest, prefer-stable]
         include:
-          - laravel: 7.*
-            php: 7.4
-            dependency-version: prefer-stable
-          - laravel: 6.*
-            php: 7.3
-            dependency-version: prefer-stable
+        - laravel: 7.*
+          php: 7.4
+          dependency-version: prefer-stable
+        - laravel: 6.*
+          php: 7.3
+          dependency-version: prefer-stable
 
     name: P${{ matrix.php }} - L${{ matrix.laravel }} - ${{ matrix.dependency-version }} - ${{ matrix.os }}
 

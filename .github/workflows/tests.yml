@@ -52,7 +52,7 @@ jobs:
         composer update --${{ matrix.dependency-version }} --prefer-dist --no-interaction --no-suggest
 
     - name: Execute Unit Tests
-      run: composer test
+      run: composer test -- --coverage-clover coverage/coverage.xml
 
     - name: Check PSR-12 Codestyle
       run: composer lint
@@ -61,4 +61,5 @@ jobs:
       uses: codecov/codecov-action@v1
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
+        file: ./coverage/coverage.xml
         fail_ci_if_error: true

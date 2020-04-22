@@ -1,0 +1,53 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - 0 5 * * *
+
+jobs:
+  php-tests:
+
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        php: [7.4, 7.3, 7.2]
+        laravel: [7.*]
+        dependency-version: [prefer-lowest, prefer-stable]
+        include:
+          - laravel: 7.*
+            php: 7.4
+            dependency-version: prefer-stable
+          - laravel: 6.*
+            php: 7.3
+            dependency-version: prefer-stable
+
+    name: P${{ matrix.php }} - L${{ matrix.laravel }} - ${{ matrix.dependency-version }} - ${{ matrix.os }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Install Librdkafka
+      run: sudo apt-get install librdkafka-dev
+
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: ${{ matrix.php }}
+        extensions: curl, libxml, mbstring, zip, bcmath, rdkafka
+        coverage: pcov
+
+    - name: Install dependencies
+      run: |
+        composer remove phpro/grumphp --no-interaction --no-update --dev
+        composer require "laravel/framework:${{ matrix.laravel }}" --no-interaction --no-update
+        composer update --${{ matrix.dependency-version }} --prefer-dist --no-interaction --no-suggest
+
+    - name: Execute Unit Tests
+      run: composer test
+
+    - name: Check PSR-12 Codestyle
+      run: composer lint

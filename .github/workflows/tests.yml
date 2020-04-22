@@ -41,6 +41,7 @@ jobs:
       uses: shivammathur/setup-php@v2
       with:
         php-version: ${{ matrix.php }}
+        tools: composer, pecl
         extensions: curl, libxml, mbstring, zip, bcmath, rdkafka
         coverage: pcov
 

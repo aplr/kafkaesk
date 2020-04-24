@@ -201,16 +201,16 @@ class KafkaQueue extends Queue implements QueueContract
       *
       * @return mixed
       */
-      public function releaseBack($delay, $job, $data, $queue, $attempts = 0)
-      {
-          if ($delay > 0) {
-              return $this->later($delay, $job, $data, $queue);
-          } else {
-              return $this->pushRaw($this->createPayload($job, $data), $queue, [
-                  'attempts' => $attempts,
-              ]);
-          }
-      }
+    public function releaseBack($delay, $job, $data, $queue, $attempts = 0)
+    {
+        if ($delay > 0) {
+            return $this->later($delay, $job, $data, $queue);
+        } else {
+            return $this->pushRaw($this->createPayload($job, $data), $queue, [
+                'attempts' => $attempts,
+            ]);
+        }
+    }
 
     /**
      * @param string $queue

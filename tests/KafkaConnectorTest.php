@@ -23,7 +23,7 @@ class KafkaConnectorTest extends TestCase
             'queue' => 'queue_name',
             'consumer_group_id' => 'php-pubsub',
             'brokers' => 'localhost',
-            'sleep_on_error' => 5,
+            'sleep_on_error' => 5
         ];
 
         /** @var \Illuminate\Container\Container|\Mockery\MockInterface $container */

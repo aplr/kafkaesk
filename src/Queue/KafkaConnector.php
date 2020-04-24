@@ -76,7 +76,7 @@ class KafkaConnector implements ConnectorInterface
             $producer,
             $consumer,
             $config,
-            $this->log,
+            $this->log
         );
     }
 }

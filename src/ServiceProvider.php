@@ -42,7 +42,7 @@ class ServiceProvider extends BaseServiceProvider implements DeferrableProvider
         $this->registerBindings();
         $this->registerConnector(
             $this->app['queue'],
-            $this->app,
+            $this->app
         );
     }
     
@@ -92,7 +92,7 @@ class ServiceProvider extends BaseServiceProvider implements DeferrableProvider
             'kafka.topicConf',
             'kafka.producer',
             'kafka.consumer',
-            'kafka.conf',
+            'kafka.conf'
         ];
     }
 }

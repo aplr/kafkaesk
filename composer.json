@@ -16,12 +16,11 @@
     },
     "require": {
         "php": ">=7.2.0",
+        "ext-rdkafka": "*",
         "illuminate/queue": "^6.0|^7.0|^8.0",
         "illuminate/support": "^6.0|^7.0|^8.0",
         "illuminate/database": "^6.0|^7.0|^8.0",
-        "illuminate/contracts": "^6.0|^7.0|^8.0",
-        "ext-rdkafka": "*",
-        "squizlabs/php_codesniffer": "^3.5"
+        "illuminate/contracts": "^6.0|^7.0|^8.0"
     },
     "require-dev": {
         "graham-campbell/analyzer": "^3.0",
@@ -30,7 +29,8 @@
         "kwn/php-rdkafka-stubs": "^2.0",
         "mockery/mockery": "^1.3",
         "phpro/grumphp": "^0.18",
-        "phpunit/phpunit": "^9.0"
+        "phpunit/phpunit": "^9.0",
+        "squizlabs/php_codesniffer": "^3.5"
     },
     "autoload": {
         "psr-4": {

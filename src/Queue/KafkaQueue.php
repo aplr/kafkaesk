@@ -112,6 +112,12 @@ class KafkaQueue extends Queue implements QueueContract
     public function pushRaw($payload, $queue = null, array $options = [])
     {
         try {
+            if (isset($options['attempts'])) {
+                $payload = json_decode($payload, true);
+                $payload['attempts'] = $options['attempts'];
+                $payload = json_encode($payload);
+            }
+            
             $topic = $this->getTopic($queue);
 
             $pushRawCorrelationId = $this->getCorrelationId();
@@ -183,6 +189,28 @@ class KafkaQueue extends Queue implements QueueContract
             throw new KafkaException('Could not pop from the queue', 0, $exception);
         }
     }
+
+    /**
+      * Release a reserved job back onto the queue.
+      *
+      * @param  \DateTimeInterface|\DateInterval|int $delay
+      * @param  string|object $job
+      * @param  mixed $data
+      * @param  string $queue
+      * @param  int $attempts
+      *
+      * @return mixed
+      */
+      public function releaseBack($delay, $job, $data, $queue, $attempts = 0)
+      {
+          if ($delay > 0) {
+              return $this->later($delay, $job, $data, $queue);
+          } else {
+              return $this->pushRaw($this->createPayload($job, $data), $queue, [
+                  'attempts' => $attempts,
+              ]);
+          }
+      }
 
     /**
      * @param string $queue

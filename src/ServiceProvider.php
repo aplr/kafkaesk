@@ -14,35 +14,25 @@ use Aplr\Kafkaesk\Queue\KafkaConnector;
 class ServiceProvider extends BaseServiceProvider implements DeferrableProvider
 {
     /**
-     * Boot the service provider.
-     *
-     * @return void
-     */
-    public function boot()
-    {
-        $this->setupConfig();
-    }
-
-    public function setupConfig()
-    {
-        $source = realpath($raw = __DIR__ . '/../config/kafkaesk.php') ?: $raw;
-
-        $this->publishes([$source => config_path('kafkaesk.php')]);
-
-        $this->mergeConfigFrom($source, 'queue.connections.kafka');
-    }
-
-    /**
      * Register the service provider.
      *
      * @return void
      */
     public function register()
     {
+        $this->setupConfig();
         $this->registerBindings();
         $this->registerConnector(
             $this->app['queue'],
             $this->app
+        );
+    }
+
+    public function setupConfig()
+    {
+        $this->mergeConfigFrom(
+            __DIR__ . '/../config/kafkaesk.php',
+            'queue.connections.kafka'
         );
     }
     

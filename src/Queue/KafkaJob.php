@@ -8,8 +8,8 @@ use Illuminate\Queue\Jobs\Job;
 use Illuminate\Queue\Jobs\JobName;
 use Illuminate\Database\DetectsConcurrencyErrors;
 use Illuminate\Contracts\Queue\Job as JobContract;
-use RdKafka\Message;
-use RdKafka\ConsumerTopic;
+use Aplr\Kafkaesk\KafkaMessage;
+use Aplr\Kafkaesk\TopicConsumer;
 use Aplr\Kafkaesk\Queue\KafkaQueue;
 use Aplr\Kafkaesk\Exceptions\KafkaException;
 
@@ -28,36 +28,36 @@ class KafkaJob extends Job implements JobContract
     protected $queue;
 
     /**
-     * @var \RdKafka\Message
+     * @var \Aplr\Kafkaesk\KafkaMessage
      */
     protected $message;
 
     /**
-     * @var \RdKafka\ConsumerTopic
+     * @var \Aplr\Kafkaesk\TopicConsumer
      */
-    protected $topic;
+    protected $consumer;
 
     /**
      * KafkaJob constructor.
      *
      * @param \Aplr\Kafkaesk\Queue\KafkaQueue $connection
-     * @param \RdKafka\Message $message
+     * @param \Aplr\Kafkaesk\KafkaMessage $message
      * @param string $connectionName
      * @param string $queue
-     * @param \RdKafka\ConsumerTopic $topic
+     * @param \Aplr\Kafkaesk\TopicConsumer $consumer
      */
     public function __construct(
         KafkaQueue $connection,
-        Message $message,
+        KafkaMessage $message,
         $connectionName,
         $queue,
-        ConsumerTopic $topic
+        TopicConsumer $consumer
     ) {
         $this->connection = $connection;
         $this->message = $message;
         $this->connectionName = $connectionName;
         $this->queue = $queue;
-        $this->topic = $topic;
+        $this->consumer = $consumer;
     }
 
     /**
@@ -104,7 +104,7 @@ class KafkaJob extends Job implements JobContract
      */
     public function getRawBody()
     {
-        return $this->message->payload;
+        return $this->message->getPayload();
     }
 
     /**
@@ -114,7 +114,7 @@ class KafkaJob extends Job implements JobContract
     {
         try {
             parent::delete();
-            $this->topic->offsetStore($this->message->partition, $this->message->offset);
+            $this->consumer->reject($this->message);
         } catch (\RdKafka\Exception $exception) {
             throw new KafkaException('Could not delete job from the queue', 0, $exception);
         }
@@ -154,7 +154,7 @@ class KafkaJob extends Job implements JobContract
      */
     public function getJobId()
     {
-        return $this->message->key;
+        return $this->message->getKey();
     }
 
     /**

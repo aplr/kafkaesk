@@ -18,9 +18,11 @@
         "php": ">=7.2.0",
         "ext-rdkafka": "*",
         "illuminate/queue": "^6.0|^7.0|^8.0",
+        "illuminate/console": "^6.0|^7.0|^8.0",
         "illuminate/support": "^6.0|^7.0|^8.0",
         "illuminate/database": "^6.0|^7.0|^8.0",
-        "illuminate/contracts": "^6.0|^7.0|^8.0"
+        "illuminate/contracts": "^6.0|^7.0|^8.0",
+        "graham-campbell/manager": "^4.5"
     },
     "require-dev": {
         "graham-campbell/analyzer": "^3.0",

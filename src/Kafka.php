@@ -75,7 +75,7 @@ class Kafka implements KafkaContract
      * @param  string|Closure|ProcessesMessages|null  $processor
      * @return void
      */
-    public function consume($topic = null, $processor): void
+    public function consume($topic = null, $processor = null): void
     {
         if ($processor) {
             $this->processor->bind($topic, $processor);

@@ -2,27 +2,25 @@
 
 namespace Aplr\Kafkaesk;
 
-use RdKafka\Producer;
 use RdKafka\KafkaConsumer;
 use Psr\Log\LoggerInterface;
 use Aplr\Kafkaesk\Exceptions\KafkaException;
-use RdKafka\TopicPartition;
 
 class TopicConsumer
 {
-    /**
-     * Producer instance
-     *
-     * @var \RdKafka\Producer
-     */
-    private $producer;
-
     /**
      * Consumer instance
      *
      * @var \RdKafka\KafkaConsumer
      */
     private $consumer;
+
+    /**
+     * Producer instance
+     *
+     * @var \Aplr\Kafkaesk\KafkaProducer
+     */
+    private $producer;
 
     /**
      * Consumer topics
@@ -50,22 +48,22 @@ class TopicConsumer
      *
      * @param array $topics
      * @param integer $timeout
-     * @param \RdKafka\Producer $producer
      * @param \Aplr\Kafkaesk\KafkaConsumer $consumer
+     * @param \Aplr\Kafkaesk\KafkaProducer $producer
      * @param \Psr\Log\LoggerInterface $log
      */
     public function __construct(
         array $topics,
         int $timeout,
-        Producer $producer,
         KafkaConsumer $consumer,
+        KafkaProducer $producer,
         LoggerInterface $log
     ) {
-        $this->log = $log;
         $this->topics = $topics;
         $this->timeout = $timeout;
-        $this->producer = $producer;
         $this->consumer = $consumer;
+        $this->producer = $producer;
+        $this->log = $log;
     }
 
     /**
@@ -102,14 +100,7 @@ class TopicConsumer
         $this->commit($message);
 
         if ($requeue) {
-            $topic = $this->producer->newTopic($message->getTopic());
-
-            $topic->produce(
-                $message->getPartition(),
-                0,
-                $message->getPayload(),
-                $message->getKey()
-            );
+            $this->producer->produce($message);
         }
     }
 

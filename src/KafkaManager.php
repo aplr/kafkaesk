@@ -2,11 +2,13 @@
 
 namespace Aplr\Kafkaesk;
 
-use Illuminate\Contracts\Config\Repository;
-use GrahamCampbell\Manager\AbstractManager;
 use Psr\Log\LoggerInterface;
+use GrahamCampbell\Manager\AbstractManager;
+use Illuminate\Contracts\Config\Repository;
+use Aplr\Kafkaesk\Processors\BindsProcessors;
+use Aplr\Kafkaesk\Processors\ProcessesMessages;
 
-class KafkaManager extends AbstractManager
+class KafkaManager extends AbstractManager implements BindsProcessors
 {
     /**
      * The factory instance.
@@ -14,6 +16,13 @@ class KafkaManager extends AbstractManager
      * @var \Aplr\Kafkaesk\KafkaFactory
      */
     protected $factory;
+
+    /**
+     * The processor instance.
+     *
+     * @var \Aplr\Kafkaesk\KafkaProcessor
+     */
+    protected $processor;
 
     /**
      * The logger instance.
@@ -25,19 +34,20 @@ class KafkaManager extends AbstractManager
     /**
      * Create a new kafka manager instance.
      *
-     * @param  \Illuminate\Contracts\Config\Repository  $config
-     * @param  \Aplr\Kafkaesk\KafkaFactory  $factory
-     * @param  \Psr\Log\LoggerInterface  $log
-     *
-     * @return void
+     * @param \Illuminate\Contracts\Config\Repository  $config
+     * @param \Aplr\Kafkaesk\KafkaFactory  $factory
+     * @param \Aplr\Kafkaesk\KafkaProcessor  $processor
+     * @param \Psr\Log\LoggerInterface  $log
      */
     public function __construct(
         Repository $config,
         KafkaFactory $factory,
+        KafkaProcessor $processor,
         LoggerInterface $log
     ) {
         $this->config = $config;
         $this->factory = $factory;
+        $this->processor = $processor;
         $this->log = $log;
     }
 
@@ -51,9 +61,10 @@ class KafkaManager extends AbstractManager
     protected function createConnection(array $config)
     {
         return new Kafka(
-            $this->factory->makeProducer($config),
-            $this->factory,
             $config,
+            $this->factory,
+            $this->factory->makeProducer($config),
+            $this->processor,
             $this->log
         );
     }
@@ -92,5 +103,15 @@ class KafkaManager extends AbstractManager
     public function getFactory()
     {
         return $this->factory;
+    }
+
+    /**
+     * @inheritDoc
+     *
+     * @throws \InvalidArgumentException
+     */
+    public function bind(string $topic, $processor, bool $force = false): ProcessesMessages
+    {
+        return $this->processor->bind($topic, $processor, $force);
     }
 }

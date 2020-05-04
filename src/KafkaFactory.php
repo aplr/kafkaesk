@@ -40,9 +40,9 @@ class KafkaFactory
      *
      * @param array $config
      *
-     * @return \RdKafka\Producer
+     * @return \Aplr\Kafkaesk\KafkaProducer
      */
-    public function makeProducer(array $config): Producer
+    public function makeProducer(array $config): KafkaProducer
     {
         /** @var Conf $conf */
         $conf = new Conf();
@@ -53,7 +53,7 @@ class KafkaFactory
         $producer = $this->app->makeWith('kafka.producer', ['conf' => $conf]);
         $producer->addBrokers($config['brokers']);
 
-        return $producer;
+        return new KafkaProducer($producer);
     }
 
     /**
@@ -138,8 +138,8 @@ class KafkaFactory
         return new TopicConsumer(
             $topics,
             $timeout,
-            $producer,
             $consumer,
+            $producer,
             $this->log
         );
     }

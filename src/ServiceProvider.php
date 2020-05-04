@@ -95,6 +95,7 @@ class ServiceProvider extends BaseServiceProvider implements DeferrableProvider
     public function registerKafka()
     {
         $this->registerFactory();
+        $this->registerProcessor();
         $this->registerManager();
         $this->registerBindings();
         $this->registerCommands();
@@ -114,6 +115,22 @@ class ServiceProvider extends BaseServiceProvider implements DeferrableProvider
     }
 
     /**
+     * Register the kafka event processor.
+     *
+     * @return void
+     */
+    protected function registerProcessor()
+    {
+        $this->app->singleton('kafka.processor', function (Container $app) {
+            return new KafkaProcessor(
+                $app,
+                $app['log']
+            );
+        });
+        $this->app->alias('kafka.processor', KafkaProcessor::class);
+    }
+
+    /**
      * Register the kafka manager class.
      *
      * @return void
@@ -124,6 +141,7 @@ class ServiceProvider extends BaseServiceProvider implements DeferrableProvider
             return new KafkaManager(
                 $app['config'],
                 $app['kafka.factory'],
+                $app['kafka.processor'],
                 $app['log']
             );
         });

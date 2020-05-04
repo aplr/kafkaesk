@@ -2,24 +2,19 @@
 
 namespace Aplr\Kafkaesk;
 
-use RdKafka\Producer;
 use Psr\Log\LoggerInterface;
+use Aplr\Kafkaesk\Processors\ProcessesMessages;
 use Aplr\Kafkaesk\Contracts\Kafka as KafkaContract;
 
 class Kafka implements KafkaContract
 {
-    /**
-     * @var \Psr\Log\LoggerInterface
-     */
-    private $log;
-
     /**
      * @var array
      */
     private $config;
 
     /**
-     * @var \RdKafka\Producer
+     * @var \Aplr\Kafkaesk\KafkaProducer
      */
     private $producer;
 
@@ -29,21 +24,34 @@ class Kafka implements KafkaContract
     private $factory;
 
     /**
+     * @var \Aplr\Kafkaesk\KafkaProcessor
+     */
+    private $processor;
+
+    /**
+     * @var \Psr\Log\LoggerInterface
+     */
+    private $log;
+
+    /**
      * Kafka constructor
      *
-     * @param \RdKafka\Producer $producer
-     * @param \Aplr\Kafkaesk\KafkaFactory $factory
      * @param array $config
+     * @param \Aplr\Kafkaesk\KafkaFactory $factory
+     * @param \Aplr\Kafkaesk\KafkaProducer $producer
+     * @param \Aplr\Kafkaesk\KafkaProcessor $processor
      * @param \Psr\Log\LoggerInterface $log
      */
     public function __construct(
-        Producer $producer,
-        KafkaFactory $factory,
         array $config,
+        KafkaFactory $factory,
+        KafkaProducer $producer,
+        KafkaProcessor $processor,
         LoggerInterface $log
     ) {
         $this->producer = $producer;
         $this->factory = $factory;
+        $this->processor = $processor;
         $this->config = $config;
         $this->log = $log;
         $this->subscribedTopics = [];
@@ -52,38 +60,48 @@ class Kafka implements KafkaContract
     /**
      * Produce a message
      *
-     * @param \Aplr\Kafkaesk\KafkaMessage $message
+     * @param  \Aplr\Kafkaesk\KafkaMessage $message
      * @return void
      */
     public function produce(KafkaMessage $message): void
     {
-        $topic = $this->producer->newTopic($message->getTopic());
-
-        $topic->produce(
-            $message->getPartition(),
-            0,
-            $message->getPayload(),
-            $message->getKey()
-        );
+        $this->producer->produce($message);
     }
 
     /**
      * Start a long-running consumer
      *
-     * @param string|array $topic
+     * @param  string|array  $topic
+     * @param  string|Closure|ProcessesMessages|null  $processor
      * @return void
      */
-    public function consume($topic = null): void
+    public function consume($topic = null, $processor): void
     {
+        if ($processor) {
+            $this->processor->bind($topic, $processor);
+        }
+
         $consumer = $this->subscribe($topic);
 
         // Start the long running consumer
         while (true) {
-            if ($message = $consumer->receive()) {
+            // Receive a message from the consumer. If it was
+            // null, re-iterate.
+            if (null === ($message = $consumer->receive())) {
+                continue;
             }
+
+            // Forward the message to the processor
+            $this->process($message, $consumer);
         }
     }
 
+    /**
+     * Create a consumer instance for the given topic
+     *
+     * @param  string|array|null $topic
+     * @return \Aplr\Kafkaesk\TopicConsumer
+     */
     public function consumer($topic = null): TopicConsumer
     {
         return $this->subscribe($topic);
@@ -93,7 +111,7 @@ class Kafka implements KafkaContract
      * Create a consumer and bind it to the given topic(s).
      * If no topics are given, the connections' default topics are used.
      *
-     * @param string|array|null $topic
+     * @param  string|array|null $topic
      * @return \Aplr\Kafkaesk\TopicConsumer
      */
     private function subscribe($topic): TopicConsumer
@@ -107,9 +125,35 @@ class Kafka implements KafkaContract
     }
 
     /**
+     * Forwards the message received on the given consumer
+     * to either the given $processor, or to the default
+     * event processor.
+     *
+     * @param  \Aplr\Kafkaesk\KafkaMessage $message
+     * @param  \Aplr\Kafkaesk\TopicConsumer $consumer
+     * @return void
+     */
+    private function process(KafkaMessage $message, TopicConsumer $consumer): void
+    {
+        $result = $this->processor->process($message);
+
+        switch ($result) {
+            case KafkaProcessor::ACK:
+                $consumer->commit($message);
+                break;
+            case KafkaProcessor::REJECT:
+                $consumer->reject($message);
+                break;
+            case KafkaProcessor::REQUEUE:
+                $consumer->reject($message, true);
+                break;
+        }
+    }
+
+    /**
      * Get topics as array
      *
-     * @param array|string|null  $topic
+     * @param  array|string|null  $topic
      * @return string[]
      */
     private function getTopics($topic)

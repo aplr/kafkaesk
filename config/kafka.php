@@ -20,7 +20,7 @@ return [
             /**
              * The consumer timeout
              */
-            'consumer_timeout' -> env('KAFKA_CONSUMER_TIMEOUT', 1000),
+            'consumer_timeout' => env('KAFKA_CONSUMER_TIMEOUT', 1000),
 
             /*
              * Address of the Kafka broker

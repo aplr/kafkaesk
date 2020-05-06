@@ -1,6 +1,6 @@
 <?php
 
-namespace Aplr\Kafkaesk\Tests;
+namespace Aplr\Kafkaesk\Tests\Queue;
 
 use Mockery;
 use Psr\Log\LoggerInterface;

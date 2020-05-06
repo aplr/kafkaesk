@@ -4,9 +4,14 @@ namespace Aplr\Kafkaesk;
 
 use Throwable;
 use Illuminate\Database\DetectsLostConnections;
+use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Contracts\Cache\Repository as CacheContract;
 use Aplr\Kafkaesk\Contracts\Factory;
+use Aplr\Kafkaesk\Events\WorkerStopping;
+use Aplr\Kafkaesk\Events\MessageProcessed;
+use Aplr\Kafkaesk\Events\MessageProcessing;
+use Aplr\Kafkaesk\Events\MessageExceptionOccured;
 use Aplr\Kafkaesk\Processor\Message as ProcessorMessage;
 
 class Worker
@@ -19,6 +24,13 @@ class Worker
      * @var \Aplr\Kafkaesk\Contracts\Factory
      */
     protected $manager;
+    
+    /**
+     * The event dispatcher instance.
+     *
+     * @var \Illuminate\Contracts\Events\Dispatcher
+     */
+    protected $events;
 
     /**
      * The cache repository implementation.
@@ -65,15 +77,18 @@ class Worker
      *
      * @param  \Aplr\Kafkaesk\Contracts\Factory  $manager
      * @param  \Aplr\Kafkaesk\Processor  $processor
+     * @param  \Illuminate\Contracts\Events\Dispatcher  $events
      * @param  \Illuminate\Contracts\Debug\ExceptionHandler  $exceptions
      * @param  callable  $isDownForMaintenance
      */
     public function __construct(
         Factory $manager,
         Processor $processor,
+        Dispatcher $events,
         ExceptionHandler $exceptions,
         callable $isDownForMaintenance
     ) {
+        $this->events = $events;
         $this->manager = $manager;
         $this->processor = $processor;
         $this->exceptions = $exceptions;
@@ -85,7 +100,7 @@ class Worker
      *
      * @param  string  $connectionName
      * @param  string  $topic
-     * @param  \Illuminate\Queue\WorkerOptions  $options
+     * @param  \Aplr\Kafkaesk\WorkerOptions  $options
      *
      * @return void
      */
@@ -113,9 +128,7 @@ class Worker
             // First, we will attempt to get the next message off of the topic. We will also
             // register the timeout handler and reset the alarm for this message so it is
             // not stuck in a frozen state forever. Then, we can consume this message.
-            $message = ProcessorMessage::wrap(
-                $this->getNextMessage($consumer)
-            );
+            $message = $this->getNextMessage($consumer);
 
             if ($this->supportsAsyncSignals()) {
                 $this->registerTimeoutHandler($options);
@@ -125,7 +138,7 @@ class Worker
             // process the message. Otherwise, we will need to sleep the worker so
             // no more messages are processed until they should be processed.
             if ($message) {
-                $this->processMessage($message, $consumer);
+                $this->processMessage($message, $consumer, $connectionName);
             } else {
                 $this->sleep($options->sleep);
             }
@@ -173,9 +186,7 @@ class Worker
     /**
      * Determine if the daemon should process on this iteration.
      *
-     * @param  \Illuminate\Queue\WorkerOptions  $options
-     * @param  string  $connectionName
-     * @param  string  $queue
+     * @param  \Aplr\Kafkaesk\WorkerOptions  $options
      *
      * @return bool
      */
@@ -187,7 +198,7 @@ class Worker
     /**
      * Pause the worker for the current loop.
      *
-     * @param  \Illuminate\Queue\WorkerOptions  $options
+     * @param  \Aplr\Kafkaesk\WorkerOptions  $options
      * @param  int  $lastRestart
      *
      * @return void
@@ -202,13 +213,13 @@ class Worker
     /**
      * Stop the process if necessary.
      *
-     * @param  \Illuminate\Queue\WorkerOptions  $options
+     * @param  \Aplr\Kafkaesk\WorkerOptions  $options
      * @param  int  $lastRestart
-     * @param  mixed  $job
+     * @param  mixed  $message
      *
      * @return void
      */
-    protected function stopIfNecessary(WorkerOptions $options, $lastRestart, $job = null)
+    protected function stopIfNecessary(WorkerOptions $options, $lastRestart, $message = null)
     {
         if ($this->shouldQuit) {
             $this->stop();
@@ -216,9 +227,35 @@ class Worker
             $this->stop(12);
         } elseif ($this->queueShouldRestart($lastRestart)) {
             $this->stop();
-        } elseif ($options->stopWhenEmpty && is_null($job)) {
+        } elseif ($options->stopWhenEmpty && is_null($message)) {
             $this->stop();
         }
+    }
+
+    /**
+     * Process the next message on the queue.
+     *
+     * @param  string  $connectionName
+     * @param  string  $topic
+     * @param  \Aplr\Kafkaesk\WorkerOptions  $options
+     *
+     * @return void
+     */
+    public function processNextMessage(string $connectionName, string $topic, WorkerOptions $options)
+    {
+        $connection = $this->manager->connection($connectionName);
+        $consumer = $connection->consumer($this->getTopics($topic));
+
+        $message = $this->getNextMessage($consumer);
+
+        // If we're able to pull a job off of the stack, we will process it and then return
+        // from this method. If there is no job on the queue, we will "sleep" the worker
+        // for the specified number of seconds, then keep processing jobs after sleep.
+        if ($message) {
+            return $this->processMessage($message, $consumer, $connectionName);
+        }
+
+        $this->sleep($options->sleep);
     }
 
     /**
@@ -227,13 +264,13 @@ class Worker
      * @param  \Aplr\Kafkaesk\Consumer  $consumer
      * @param  string  $topic
      *
-     * @return \Aplr\Kafkaesk\Message|null
+     * @return \Aplr\Kafkaesk\Processor\Message|null
      */
-    protected function getNextMessage(Consumer $consumer): Message
+    protected function getNextMessage(Consumer $consumer): ProcessorMessage
     {
         try {
             if (null !== ($message = $consumer->receive())) {
-                return $message;
+                return ProcessorMessage::wrap($message);
             }
         } catch (Throwable $e) {
             $this->exceptions->report($e);
@@ -249,14 +286,14 @@ class Worker
      *
      * @return \Aplr\Kafkaesk\Processor\Message  $message
      * @param  \Aplr\Kafkaesk\Consumer  $consumer
-     * @param  \Illuminate\Queue\WorkerOptions  $options
+     * @param  string  $connectionName
      *
      * @return void
      */
-    protected function processMessage(ProcessorMessage $message, Consumer $consumer)
+    protected function processMessage(ProcessorMessage $message, Consumer $consumer, string $connectionName)
     {
         try {
-            return $this->process($message, $consumer);
+            return $this->process($message, $consumer, $connectionName);
         } catch (Throwable $e) {
             $this->exceptions->report($e);
 
@@ -283,28 +320,44 @@ class Worker
      *
      * @return \Aplr\Kafkaesk\Processor\Message  $message
      * @param  \Aplr\Kafkaesk\Consumer  $consumer
-     * @param  \Aplr\Kafkaesk\WorkerOptions  $options
+     * @param  string  $connectionName
      *
      * @throws \Throwable
      *
      * @return void
      */
-    public function process(ProcessorMessage $message, Consumer $consumer)
+    public function process(ProcessorMessage $message, Consumer $consumer, string $connectionName)
     {
         try {
-            // TODO
+            // First we will raise the before message event
+            $this->raiseBeforeMessageEvent($connectionName, $message);
+
+            if ($message->isRejected()) {
+                return $this->raiseAfterMessageEvent($connectionName, $message);
+            }
+
             $this->processor->process($message);
+
+            if ($message->isAcknowledged()) {
+                $consumer->commit($message);
+            } elseif ($message->isRejected()) {
+                $consumer->reject($message);
+            } elseif ($message->isRequeued()) {
+                $consumer->reject($message, true);
+            }
+
+            $this->raiseAfterMessageEvent($connectionName, $message);
         } catch (Throwable $e) {
-            $this->handleMessageException($message, $consumer, $e);
+            $this->handleMessageException($connectionName, $message, $consumer, $e);
         }
     }
 
     /**
      * Handle an exception that occurred while the message was processing.
      *
+     * @param  string  $connectionName
      * @param  \Aplr\Kafkaesk\Processor\Message  $message
      * @param  \Aplr\Kafkaesk\Consumer  $consumer
-     * @param  \Aplr\Kafkaesk\WorkerOptions  $options
      * @param  \Throwable  $e
      *
      * @throws \Throwable
@@ -312,10 +365,17 @@ class Worker
      * @return void
      */
     protected function handleMessageException(
+        string $connectionName,
         ProcessorMessage $message,
         Consumer $consumer,
         Throwable $e
     ) {
+        $this->raiseExceptionOccurredMessageEvent(
+            $connectionName,
+            $message,
+            $e
+        );
+
         // If we catch an exception, we will attempt to release the job back onto the queue
         // so it is not lost entirely. This'll let the job be retried at a later time by
         // another listener (or this same one). We will re-throw this exception after.
@@ -324,6 +384,58 @@ class Worker
         }
 
         throw $e;
+    }
+
+    /**
+     * Raise the before kafka message event.
+     *
+     * @param  string  $connectionName
+     * @param  \Aplr\Kafkaesk\Processor\Message  $message
+     * @return void
+     */
+    protected function raiseBeforeMessageEvent(string $connectionName, ProcessorMessage $message)
+    {
+        $this->events->dispatch(new MessageProcessing(
+            $connectionName,
+            $message
+        ));
+    }
+
+    /**
+     * Raise the after kafka message event.
+     *
+     * @param  string  $connectionName
+     * @param  \Aplr\Kafkaesk\Processor\Message  $message
+     *
+     * @return void
+     */
+    protected function raiseAfterMessageEvent(string $connectionName, ProcessorMessage $message)
+    {
+        $this->events->dispatch(new MessageProcessed(
+            $connectionName,
+            $message
+        ));
+    }
+
+    /**
+     * Raise the exception occurred kafka message event.
+     *
+     * @param  string  $connectionName
+     * @param  \Aplr\Kafkaesk\Processor\Message  $message
+     * @param  \Throwable  $e
+     *
+     * @return void
+     */
+    protected function raiseExceptionOccurredMessageEvent(
+        string $connectionName,
+        ProcessorMessage $message,
+        Throwable $e
+    ) {
+        $this->events->dispatch(new MessageExceptionOccured(
+            $connectionName,
+            $message,
+            $e
+        ));
     }
 
     /**
@@ -346,7 +458,7 @@ class Worker
     protected function getTimestampOfLastQueueRestart()
     {
         if ($this->cache) {
-            return $this->cache->get('illuminate:queue:restart');
+            return $this->cache->get('kafkaesk:kafka:restart');
         }
     }
 
@@ -403,6 +515,8 @@ class Worker
      */
     public function stop($status = 0)
     {
+        $this->events->dispatch(new WorkerStopping($status));
+
         exit($status);
     }
 
@@ -415,6 +529,8 @@ class Worker
      */
     public function kill($status = 0)
     {
+        $this->events->dispatch(new WorkerStopping($status));
+
         if (extension_loaded('posix')) {
             posix_kill(getmypid(), SIGKILL);
         }

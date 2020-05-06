@@ -19,17 +19,8 @@ class ServiceProvider extends BaseServiceProvider
         /** @var KafkaManager */
         $manager = $this->app->make('kafka');
 
-        collect($this->process)->each(function ($processors, $topic) use ($manager) {
-            return $this->bindProcessors($topic, $processors, $manager);
-        });
-    }
-
-    private function bindProcessors(string $topic, $processors, KafkaManager $manager)
-    {
-        $collectedProcessors = collect(is_array($processors) ? $processors : [$processors]);
-
-        $collectedProcessors->each(function ($processor) use ($topic, $manager) {
-            $manager->bindProcessor($topic, $processor);
+        collect($this->process)->each(function ($processor, $topic) use ($manager) {
+            $manager->bind($topic, $processor);
         });
     }
 }

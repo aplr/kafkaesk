@@ -1,6 +1,6 @@
 <?php
 
-namespace Aplr\Kafkaesk\Tests;
+namespace Aplr\Kafkaesk\Tests\Queue;
 
 class TestJob
 {

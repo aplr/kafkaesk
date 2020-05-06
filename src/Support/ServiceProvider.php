@@ -5,7 +5,7 @@ namespace Aplr\Kafkaesk\Support;
 use Aplr\Kafkaesk\KafkaManager;
 use Illuminate\Support\ServiceProvider as BaseServiceProvider;
 
-class ServiceProvdier extends BaseServiceProvider
+class ServiceProvider extends BaseServiceProvider
 {
     /**
      * Map topics to their event processors

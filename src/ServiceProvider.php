@@ -2,17 +2,18 @@
 
 namespace Aplr\Kafkaesk;
 
-use Illuminate\Contracts\Container\Container;
-use Illuminate\Contracts\Support\DeferrableProvider;
-use Illuminate\Support\ServiceProvider as BaseServiceProvider;
 use RdKafka\Conf;
 use RdKafka\Producer;
 use RdKafka\TopicConf;
 use RdKafka\KafkaConsumer;
-use Aplr\Kafkaesk\Queue\KafkaConnector;
-use Aplr\Kafkaesk\Console\Commands\Consume;
+use Illuminate\Contracts\Container\Container;
+use Illuminate\Contracts\Debug\ExceptionHandler;
+use Illuminate\Contracts\Support\DeferrableProvider;
+use Illuminate\Support\ServiceProvider as BaseServiceProvider;
+use Aplr\Kafkaesk\Contracts\Factory;
 use Aplr\Kafkaesk\Contracts\Kafka as KafkaContract;
-use TopicConsumer;
+use Aplr\Kafkaesk\Console\Commands\Consume;
+use Aplr\Kafkaesk\Queue\KafkaConnector;
 
 class ServiceProvider extends BaseServiceProvider implements DeferrableProvider
 {
@@ -98,6 +99,7 @@ class ServiceProvider extends BaseServiceProvider implements DeferrableProvider
         $this->registerProcessor();
         $this->registerManager();
         $this->registerBindings();
+        $this->registerWorker();
         $this->registerCommands();
     }
 
@@ -122,12 +124,12 @@ class ServiceProvider extends BaseServiceProvider implements DeferrableProvider
     protected function registerProcessor()
     {
         $this->app->singleton('kafka.processor', function (Container $app) {
-            return new KafkaProcessor(
+            return new Processor(
                 $app,
                 $app['log']
             );
         });
-        $this->app->alias('kafka.processor', KafkaProcessor::class);
+        $this->app->alias('kafka.processor', Processor::class);
     }
 
     /**
@@ -147,6 +149,7 @@ class ServiceProvider extends BaseServiceProvider implements DeferrableProvider
         });
 
         $this->app->alias('kafka', KafkaManager::class);
+        $this->app->alias('kafka', Factory::class);
     }
 
     /**
@@ -174,6 +177,27 @@ class ServiceProvider extends BaseServiceProvider implements DeferrableProvider
         if ($this->app->runningInConsole()) {
             $this->commands([ Consume::class ]);
         }
+    }
+
+    /**
+     * Register the kafka worker
+     *
+     * @return void
+     */
+    public function registerWorker()
+    {
+        $this->app->singleton('kafka.worker', function ($app) {
+            $isDownForMaintenance = function () {
+                return $this->app->isDownForMaintenance();
+            };
+
+            return new Worker(
+                $app['kafka'],
+                $app['kafka.processor'],
+                $app[ExceptionHandler::class],
+                $isDownForMaintenance
+            );
+        });
     }
 
     /**

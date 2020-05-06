@@ -3,8 +3,9 @@
 namespace Aplr\Kafkaesk;
 
 use Psr\Log\LoggerInterface;
-use Aplr\Kafkaesk\Processors\ProcessesMessages;
+use Aplr\Kafkaesk\Processor\ProcessesMessages;
 use Aplr\Kafkaesk\Contracts\Kafka as KafkaContract;
+use Aplr\Kafkaesk\Processor\Message as ProcessorMessage;
 
 class Kafka implements KafkaContract
 {
@@ -14,7 +15,7 @@ class Kafka implements KafkaContract
     private $config;
 
     /**
-     * @var \Aplr\Kafkaesk\KafkaProducer
+     * @var \Aplr\Kafkaesk\Producer
      */
     private $producer;
 
@@ -24,7 +25,7 @@ class Kafka implements KafkaContract
     private $factory;
 
     /**
-     * @var \Aplr\Kafkaesk\KafkaProcessor
+     * @var \Aplr\Kafkaesk\Processor
      */
     private $processor;
 
@@ -38,15 +39,15 @@ class Kafka implements KafkaContract
      *
      * @param array $config
      * @param \Aplr\Kafkaesk\KafkaFactory $factory
-     * @param \Aplr\Kafkaesk\KafkaProducer $producer
-     * @param \Aplr\Kafkaesk\KafkaProcessor $processor
+     * @param \Aplr\Kafkaesk\Producer $producer
+     * @param \Aplr\Kafkaesk\Processor $processor
      * @param \Psr\Log\LoggerInterface $log
      */
     public function __construct(
         array $config,
         KafkaFactory $factory,
-        KafkaProducer $producer,
-        KafkaProcessor $processor,
+        Producer $producer,
+        Processor $processor,
         LoggerInterface $log
     ) {
         $this->producer = $producer;
@@ -60,10 +61,10 @@ class Kafka implements KafkaContract
     /**
      * Produce a message
      *
-     * @param  \Aplr\Kafkaesk\KafkaMessage $message
+     * @param  \Aplr\Kafkaesk\Message $message
      * @return void
      */
-    public function produce(KafkaMessage $message): void
+    public function produce(Message $message): void
     {
         $this->producer->produce($message);
     }
@@ -72,7 +73,7 @@ class Kafka implements KafkaContract
      * Start a long-running consumer
      *
      * @param  string|array  $topic
-     * @param  string|Closure|ProcessesMessages|null  $processor
+     * @param  string|callable|ProcessesMessages|null  $processor
      * @return void
      */
     public function consume($topic = null, $processor = null): void
@@ -100,9 +101,9 @@ class Kafka implements KafkaContract
      * Create a consumer instance for the given topic
      *
      * @param  string|array|null $topic
-     * @return \Aplr\Kafkaesk\TopicConsumer
+     * @return \Aplr\Kafkaesk\Consumer
      */
-    public function consumer($topic = null): TopicConsumer
+    public function consumer($topic = null): Consumer
     {
         return $this->subscribe($topic);
     }
@@ -112,9 +113,9 @@ class Kafka implements KafkaContract
      * If no topics are given, the connections' default topics are used.
      *
      * @param  string|array|null $topic
-     * @return \Aplr\Kafkaesk\TopicConsumer
+     * @return \Aplr\Kafkaesk\Consumer
      */
-    private function subscribe($topic): TopicConsumer
+    private function subscribe($topic): Consumer
     {
         $topics = $this->getTopics($topic);
 
@@ -129,24 +130,22 @@ class Kafka implements KafkaContract
      * to either the given $processor, or to the default
      * event processor.
      *
-     * @param  \Aplr\Kafkaesk\KafkaMessage $message
-     * @param  \Aplr\Kafkaesk\TopicConsumer $consumer
+     * @param  \Aplr\Kafkaesk\Message $message
+     * @param  \Aplr\Kafkaesk\Consumer $consumer
      * @return void
      */
-    private function process(KafkaMessage $message, TopicConsumer $consumer): void
+    private function process(Message $message, Consumer $consumer): void
     {
-        $result = $this->processor->process($message);
+        $processMessage = ProcessorMessage::wrap($message);
 
-        switch ($result) {
-            case KafkaProcessor::ACK:
-                $consumer->commit($message);
-                break;
-            case KafkaProcessor::REJECT:
-                $consumer->reject($message);
-                break;
-            case KafkaProcessor::REQUEUE:
-                $consumer->reject($message, true);
-                break;
+        $this->processor->process($processMessage);
+
+        if ($processMessage->isAcknowledged()) {
+            $consumer->commit($message);
+        } elseif ($processMessage->isRejected()) {
+            $consumer->reject($message);
+        } elseif ($processMessage->isRequeued()) {
+            $consumer->reject($message, true);
         }
     }
 

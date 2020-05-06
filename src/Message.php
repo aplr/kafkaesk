@@ -2,10 +2,10 @@
 
 namespace Aplr\Kafkaesk;
 
-use RdKafka\Message;
 use RdKafka\TopicPartition;
+use RdKafka\Message as KafkaMessage;
 
-class KafkaMessage
+class Message
 {
     /**
      * The message key
@@ -50,7 +50,7 @@ class KafkaMessage
     private $timestamp;
 
     /**
-     * KafkaMessage constructor
+     * Message constructor
      *
      * @param string $key
      * @param string $topic
@@ -76,12 +76,12 @@ class KafkaMessage
     }
 
     /**
-     * Create a KafkaMessage from a given RdKafka Message
+     * Create a Message from a given RdKafka Message
      *
      * @param  \RdKafka\Message $message
-     * @return \Aplr\Kafkaesk\KafkaMessage
+     * @return \Aplr\Kafkaesk\Message
      */
-    public static function from(Message $message): KafkaMessage
+    public static function from(KafkaMessage $message): Message
     {
         return new static(
             $message->key,

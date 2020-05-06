@@ -5,10 +5,11 @@ namespace Aplr\Kafkaesk;
 use Psr\Log\LoggerInterface;
 use GrahamCampbell\Manager\AbstractManager;
 use Illuminate\Contracts\Config\Repository;
-use Aplr\Kafkaesk\Processors\BindsProcessors;
-use Aplr\Kafkaesk\Processors\ProcessesMessages;
+use Aplr\Kafkaesk\Contracts\Factory;
+use Aplr\Kafkaesk\Processor\BindsProcessors;
+use Aplr\Kafkaesk\Processor\ProcessesMessages;
 
-class KafkaManager extends AbstractManager implements BindsProcessors
+class KafkaManager extends AbstractManager implements Factory, BindsProcessors
 {
     /**
      * The factory instance.
@@ -20,7 +21,7 @@ class KafkaManager extends AbstractManager implements BindsProcessors
     /**
      * The processor instance.
      *
-     * @var \Aplr\Kafkaesk\KafkaProcessor
+     * @var \Aplr\Kafkaesk\Processor
      */
     protected $processor;
 
@@ -36,13 +37,13 @@ class KafkaManager extends AbstractManager implements BindsProcessors
      *
      * @param \Illuminate\Contracts\Config\Repository  $config
      * @param \Aplr\Kafkaesk\KafkaFactory  $factory
-     * @param \Aplr\Kafkaesk\KafkaProcessor  $processor
+     * @param \Aplr\Kafkaesk\Processor  $processor
      * @param \Psr\Log\LoggerInterface  $log
      */
     public function __construct(
         Repository $config,
         KafkaFactory $factory,
-        KafkaProcessor $processor,
+        Processor $processor,
         LoggerInterface $log
     ) {
         $this->config = $config;

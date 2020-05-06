@@ -2,13 +2,13 @@
 
 namespace Aplr\Kafkaesk;
 
-use Illuminate\Support\Arr;
-use Illuminate\Container\Container;
 use RdKafka\Conf;
-use RdKafka\Producer;
 use RdKafka\TopicConf;
 use RdKafka\KafkaConsumer;
 use RdKafka\TopicPartition;
+use RdKafka\Producer as KafkaProducer;
+use Illuminate\Support\Arr;
+use Illuminate\Container\Container;
 use Psr\Log\LoggerInterface;
 
 class KafkaFactory
@@ -40,31 +40,31 @@ class KafkaFactory
      *
      * @param array $config
      *
-     * @return \Aplr\Kafkaesk\KafkaProducer
+     * @return \Aplr\Kafkaesk\Producer
      */
-    public function makeProducer(array $config): KafkaProducer
+    public function makeProducer(array $config): Producer
     {
         /** @var Conf $conf */
         $conf = new Conf();
         $conf->set('log_level', (string) LOG_DEBUG);
         $conf->set('debug', 'all');
 
-        /** @var Producer $producer */
+        /** @var KafkaProducer $producer */
         $producer = $this->app->makeWith('kafka.producer', ['conf' => $conf]);
         $producer->addBrokers($config['brokers']);
 
-        return new KafkaProducer($producer);
+        return new Producer($producer);
     }
 
     /**
-     * Create a new TopicConsumer from the given topics and config
+     * Create a new Consumer from the given topics and config
      *
      * @param array $topics
      * @param array $config
      *
-     * @return \Aplr\Kafkaesk\TopicConsumer
+     * @return \Aplr\Kafkaesk\Consumer
      */
-    public function makeConsumer(array $topics, array $config): TopicConsumer
+    public function makeConsumer(array $topics, array $config): Consumer
     {
         /** @var TopicConf $topicConf */
         $topicConf = $this->app->makeWith('kafka.topicConf', []);
@@ -135,7 +135,7 @@ class KafkaFactory
 
         $timeout = $config['consumer_timeout'] ?? 1000;
 
-        return new TopicConsumer(
+        return new Consumer(
             $topics,
             $timeout,
             $consumer,

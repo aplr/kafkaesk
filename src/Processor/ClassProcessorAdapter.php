@@ -1,15 +1,12 @@
 <?php
 
-namespace Aplr\Kafkaesk\Processors;
+namespace Aplr\Kafkaesk\Processor;
 
 use Exception;
-use Aplr\Kafkaesk\KafkaMessage;
-use Illuminate\Container\Container;
+use Psr\Container\ContainerInterface;
 
 class ClassProcessorAdapter implements ProcessesMessages
 {
-    use ValidatesProcessorResults;
-
     /**
      * The fully-qualified name of the underlying class
      *
@@ -20,14 +17,14 @@ class ClassProcessorAdapter implements ProcessesMessages
     /**
      * The resolved instance of the underlying class
      *
-     * @var \Aplr\Kafkaesk\Processors\ProcessesMessages
+     * @var \Aplr\Kafkaesk\Processor\ProcessesMessages
      */
     protected $resolved;
 
     /**
      * The app container
      *
-     * @var \Illuminate\Container\Container
+     * @var \Psr\Container\ContainerInterface
      */
     protected $container;
 
@@ -37,8 +34,9 @@ class ClassProcessorAdapter implements ProcessesMessages
      * @throws Exception
      *
      * @param string $class
+     * @param \Psr\Container\ContainerInterface $container
      */
-    public function __construct(string $class, Container $container)
+    public function __construct(string $class, ContainerInterface $container)
     {
         $this->class = $class;
         $this->container = $container;
@@ -47,13 +45,13 @@ class ClassProcessorAdapter implements ProcessesMessages
     /**
      * @inheritDoc
      */
-    public function process(KafkaMessage $message)
+    public function process(Message $message)
     {
         // Resolve the processor instance
         $processor = $this->resolve();
 
         // Forward the message to the processor
-        return $processor->process($message);
+        $processor->process($message);
     }
 
     /**
@@ -77,7 +75,7 @@ class ClassProcessorAdapter implements ProcessesMessages
         }
 
         // Resolve the processor through the container
-        $processor = $this->container->make($this->class);
+        $processor = $this->container->get($this->class);
 
         // Check if the processor implements ProcessesMessages
         if (! ($processor instanceof ProcessesMessages)) {

@@ -4,13 +4,13 @@ namespace Aplr\Kafkaesk\Queue;
 
 use Exception;
 use ErrorException;
-use Psr\Log\LoggerInterface;
 use Illuminate\Queue\Queue;
 use Illuminate\Contracts\Queue\Queue as QueueContract;
+use Psr\Log\LoggerInterface;
+use Aplr\Kafkaesk\Consumer;
+use Aplr\Kafkaesk\Message;
 use Aplr\Kafkaesk\Contracts\Kafka;
 use Aplr\Kafkaesk\Exceptions\KafkaException;
-use Aplr\Kafkaesk\KafkaMessage;
-use Aplr\Kafkaesk\TopicConsumer;
 
 class KafkaQueue extends Queue implements QueueContract
 {
@@ -50,7 +50,7 @@ class KafkaQueue extends Queue implements QueueContract
     private $topics = [];
 
     /**
-     * @var \Aplr\Kafkaesk\TopicConsumer[]
+     * @var \Aplr\Kafkaesk\Consumer[]
      */
     private $consumers = [];
 
@@ -116,7 +116,7 @@ class KafkaQueue extends Queue implements QueueContract
             $topic = $this->getQueueName($queue);
             $pushRawCorrelationId = $this->getCorrelationId();
 
-            $message = new KafkaMessage(
+            $message = new Message(
                 $pushRawCorrelationId,
                 $topic,
                 $payload,
@@ -199,9 +199,9 @@ class KafkaQueue extends Queue implements QueueContract
      * Get the cached consumer for the given queue name
      *
      * @param  string|null  $queue
-     * @return TopicConsumer
+     * @return Consumer
      */
-    private function resolveConsumer($queue): TopicConsumer
+    private function resolveConsumer($queue): Consumer
     {
         $topic = $this->getQueueName($queue);
 

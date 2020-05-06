@@ -2,26 +2,19 @@
 
 namespace Aplr\Kafkaesk;
 
-use Closure;
 use InvalidArgumentException;
 use Psr\Log\LoggerInterface;
-use Illuminate\Container\Container;
-use Aplr\Kafkaesk\Processors\BindsProcessors;
-use Aplr\Kafkaesk\Processors\ProcessesMessages;
-use Aplr\Kafkaesk\Processors\ClassProcessorAdapter;
-use Aplr\Kafkaesk\Processors\ClosureProcessorAdapter;
-use Aplr\Kafkaesk\Processors\ValidatesProcessorResults;
+use Psr\Container\ContainerInterface;
+use Aplr\Kafkaesk\Processor\Message;
+use Aplr\Kafkaesk\Processor\BindsProcessors;
+use Aplr\Kafkaesk\Processor\ProcessesMessages;
+use Aplr\Kafkaesk\Processor\ClassProcessorAdapter;
+use Aplr\Kafkaesk\Processor\ClosureProcessorAdapter;
 use Aplr\Kafkaesk\Exceptions\TopicNotBoundException;
 use Aplr\Kafkaesk\Exceptions\TopicAlreadyBoundException;
 
-class KafkaProcessor implements ProcessesMessages, BindsProcessors
+class Processor implements BindsProcessors
 {
-    use ValidatesProcessorResults;
-
-    public const ACK = 0;
-    public const REJECT = 1;
-    public const REQUEUE = 2;
-
     /**
      * The logger instance
      *
@@ -32,23 +25,24 @@ class KafkaProcessor implements ProcessesMessages, BindsProcessors
     /**
      * The service container
      *
-     * @var \Illuminate\Container\Container
+     * @var \Psr\Container\ContainerInterface
      */
     private $container;
 
     /**
      * The registered processors
      *
-     * @var \Aplr\Kafkaesk\Processors\ProcessesMessages[]
+     * @var \Aplr\Kafkaesk\Processor\ProcessesMessages[]
      */
     private $processors;
 
     /**
-     * KafkaProcessor constructor
+     * Processor constructor
      *
+     * @param \Psr\Container\ContainerInterface $container
      * @param \Psr\Logger\LoggerInterface $log
      */
-    public function __construct(Container $container, LoggerInterface $log)
+    public function __construct(ContainerInterface $container, LoggerInterface $log)
     {
         $this->log = $log;
         $this->container = $container;
@@ -76,23 +70,20 @@ class KafkaProcessor implements ProcessesMessages, BindsProcessors
     /**
      * Process the given message
      *
-     * @param \Aplr\Kafkaesk\KafkaMessage $message
+     * @param \Aplr\Kafkaesk\Processor\Message $message
      * @return integer
      */
-    public function process(KafkaMessage $message): int
+    public function process(Message $message): void
     {
         try {
             // Get the processor for the given topic
             $processor = $this->resolve($message->getTopic());
 
             // Process the message using the processor
-            $result = $processor->process($message);
-
-            // Validate and normalize the processor result
-            return $this->withValidProcessorResult($result);
+            $processor->process($message);
         } catch (TopicNotBoundException $e) {
-            $this->log->warning("[Kafka] Putting message back to the queue because of error: {$e->getMessage()}");
-            return static::REQUEUE;
+            $this->log->error("[Kafka] Putting message back to the queue because of error: {$e->getMessage()}");
+            throw $e;
         }
     }
 
@@ -104,7 +95,7 @@ class KafkaProcessor implements ProcessesMessages, BindsProcessors
      *
      * @throws \Aplr\Kafkaesk\Exceptions\TopicNotBoundException
      *
-     * @return \Aplr\Kafkaesk\Processors\ProcessesMessages
+     * @return \Aplr\Kafkaesk\Processor\ProcessesMessages
      */
     protected function resolve(string $topic): ProcessesMessages
     {
@@ -119,17 +110,17 @@ class KafkaProcessor implements ProcessesMessages, BindsProcessors
      * Wrap the given class or closure based processor
      * into a proper processor adapter
      *
-     * @param string|Closure|ProcessesMessages $processor
+     * @param string|callable|ProcessesMessages $processor
      *
      * @throws InvalidArgumentException
      *
-     * @return \Aplr\Kafkaesk\Processors\ProcessesMessages
+     * @return \Aplr\Kafkaesk\Processor\ProcessesMessages
      */
     protected function adapt($processor): ProcessesMessages
     {
         if (is_string($processor) && class_exists($processor)) {
             return new ClassProcessorAdapter($processor, $this->container);
-        } elseif ($processor instanceof Closure) {
+        } elseif (is_callable($processor)) {
             return new ClosureProcessorAdapter($processor);
         } elseif ($processor instanceof ProcessesMessages) {
             return $processor;

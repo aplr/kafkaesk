@@ -8,8 +8,8 @@ use Illuminate\Queue\Jobs\Job;
 use Illuminate\Queue\Jobs\JobName;
 use Illuminate\Database\DetectsConcurrencyErrors;
 use Illuminate\Contracts\Queue\Job as JobContract;
-use Aplr\Kafkaesk\KafkaMessage;
-use Aplr\Kafkaesk\TopicConsumer;
+use Aplr\Kafkaesk\Message;
+use Aplr\Kafkaesk\Consumer;
 use Aplr\Kafkaesk\Queue\KafkaQueue;
 use Aplr\Kafkaesk\Exceptions\KafkaException;
 
@@ -28,12 +28,12 @@ class KafkaJob extends Job implements JobContract
     protected $queue;
 
     /**
-     * @var \Aplr\Kafkaesk\KafkaMessage
+     * @var \Aplr\Kafkaesk\Message
      */
     protected $message;
 
     /**
-     * @var \Aplr\Kafkaesk\TopicConsumer
+     * @var \Aplr\Kafkaesk\Consumer
      */
     protected $consumer;
 
@@ -41,17 +41,17 @@ class KafkaJob extends Job implements JobContract
      * KafkaJob constructor.
      *
      * @param \Aplr\Kafkaesk\Queue\KafkaQueue $connection
-     * @param \Aplr\Kafkaesk\KafkaMessage $message
+     * @param \Aplr\Kafkaesk\Message $message
      * @param string $connectionName
      * @param string $queue
-     * @param \Aplr\Kafkaesk\TopicConsumer $consumer
+     * @param \Aplr\Kafkaesk\Consumer $consumer
      */
     public function __construct(
         KafkaQueue $connection,
-        KafkaMessage $message,
+        Message $message,
         $connectionName,
         $queue,
-        TopicConsumer $consumer
+        Consumer $consumer
     ) {
         $this->connection = $connection;
         $this->message = $message;

@@ -6,22 +6,8 @@ use RdKafka\KafkaConsumer;
 use Psr\Log\LoggerInterface;
 use Aplr\Kafkaesk\Exceptions\KafkaException;
 
-class TopicConsumer
+class Consumer
 {
-    /**
-     * Consumer instance
-     *
-     * @var \RdKafka\KafkaConsumer
-     */
-    private $consumer;
-
-    /**
-     * Producer instance
-     *
-     * @var \Aplr\Kafkaesk\KafkaProducer
-     */
-    private $producer;
-
     /**
      * Consumer topics
      *
@@ -37,6 +23,20 @@ class TopicConsumer
     private $timeout;
 
     /**
+     * Consumer instance
+     *
+     * @var \RdKafka\KafkaConsumer
+     */
+    private $consumer;
+
+    /**
+     * Producer instance
+     *
+     * @var \Aplr\Kafkaesk\Producer
+     */
+    private $producer;
+
+    /**
      * The logger instance.
      *
      * @var \Psr\Log\LoggerInterface
@@ -44,19 +44,19 @@ class TopicConsumer
     private $log;
 
     /**
-     * TopicConsumer constructor
+     * Consumer constructor
      *
      * @param array $topics
      * @param integer $timeout
      * @param \Aplr\Kafkaesk\KafkaConsumer $consumer
-     * @param \Aplr\Kafkaesk\KafkaProducer $producer
+     * @param \Aplr\Kafkaesk\Producer $producer
      * @param \Psr\Log\LoggerInterface $log
      */
     public function __construct(
         array $topics,
         int $timeout,
         KafkaConsumer $consumer,
-        KafkaProducer $producer,
+        Producer $producer,
         LoggerInterface $log
     ) {
         $this->topics = $topics;
@@ -79,10 +79,11 @@ class TopicConsumer
     /**
      * Commit the given message
      *
-     * @param  \Aplr\Kafkaesk\KafkaMessage  $message
+     * @param  \Aplr\Kafkaesk\Message  $message
+     *
      * @return void
      */
-    public function commit(KafkaMessage $message)
+    public function commit(Message $message)
     {
         $this->consumer->commit($message->getTopicPartition());
     }
@@ -91,11 +92,12 @@ class TopicConsumer
      * Remove the message from the topic. If $requeue is true,
      * the message is pushed back to the queue.
      *
-     * @param  \Aplr\Kafkaesk\KafkaMessage $message
+     * @param  \Aplr\Kafkaesk\Message $message
      * @param  boolean $requeue
+     *
      * @return void
      */
-    public function reject(KafkaMessage $message, bool $requeue = false)
+    public function reject(Message $message, bool $requeue = false)
     {
         $this->commit($message);
 
@@ -119,9 +121,12 @@ class TopicConsumer
      * other null messages.
      *
      * @param  int|null  $timeout
-     * @return \Aplr\Kafkaesk\KafkaMessage|null
+     *
+     * @throws \Aplr\Kafkaesk\Exceptions\KafkaException
+     *
+     * @return \Aplr\Kafkaesk\Message|null
      */
-    public function receive($timeout = null): ?KafkaMessage
+    public function receive($timeout = null): ?Message
     {
         if (null === $timeout) {
             return $this->doReceive($this->timeout);
@@ -148,9 +153,12 @@ class TopicConsumer
      * Receive a single message on the given queue
      *
      * @param  integer  $timeout
-     * @return \Aplr\Kafkaesk\KafkaMessage|null
+     *
+     * @throws \Aplr\Kafkaesk\Exceptions\KafkaException
+     *
+     * @return \Aplr\Kafkaesk\Message|null
      */
-    private function doReceive(int $timeout): ?KafkaMessage
+    private function doReceive(int $timeout): ?Message
     {
         $message = $this->consumer->consume($timeout);
 
@@ -162,7 +170,7 @@ class TopicConsumer
         switch ($message->err) {
                 // If there's no error, just return the received message
             case RD_KAFKA_RESP_ERR_NO_ERROR:
-                return KafkaMessage::from($message);
+                return Message::from($message);
                 // If we've got a PARTITION_EOF, make an info log and return null
             case RD_KAFKA_RESP_ERR__PARTITION_EOF:
                 $this->log->info("[Kafka] End of partition. Waiting for more messages to come in.", [

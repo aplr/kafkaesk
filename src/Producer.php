@@ -2,9 +2,9 @@
 
 namespace Aplr\Kafkaesk;
 
-use RdKafka\Producer;
+use RdKafka\Producer as KafkaProducer;
 
-class KafkaProducer
+class Producer
 {
     /**
      * RdKafka producer instance
@@ -18,7 +18,7 @@ class KafkaProducer
      *
      * @param \RdKafka\Producer  $producer
      */
-    public function __construct(Producer $producer)
+    public function __construct(KafkaProducer $producer)
     {
         $this->producer = $producer;
     }
@@ -26,10 +26,10 @@ class KafkaProducer
     /**
      * Produce the given kafka message
      *
-     * @param \Aplr\Kafkaesk\KafkaMessage  $message
+     * @param \Aplr\Kafkaesk\Message  $message
      * @return void
      */
-    public function produce(KafkaMessage $message): void
+    public function produce(Message $message): void
     {
         $topic = $this->producer->newTopic($message->getTopic());
 

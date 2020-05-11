@@ -85,7 +85,9 @@ class Consumer
      */
     public function commit(Message $message)
     {
-        $this->consumer->commit($message->getTopicPartition());
+        $this->consumer->commit([
+            $message->getTopicPartition()
+        ]);
     }
 
     /**

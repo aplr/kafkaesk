@@ -10,8 +10,8 @@ use Illuminate\Contracts\Container\Container;
 use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Contracts\Support\DeferrableProvider;
 use Illuminate\Support\ServiceProvider as BaseServiceProvider;
-use Aplr\Kafkaesk\Contracts\Kafka as KafkaContract;
 use Aplr\Kafkaesk\Contracts\Factory;
+use Aplr\Kafkaesk\Contracts\Kafka as KafkaContract;
 use Aplr\Kafkaesk\Queue\KafkaConnector;
 use Aplr\Kafkaesk\Console\ConsumeCommand;
 use Aplr\Kafkaesk\Console\RestartCommand;
@@ -203,6 +203,7 @@ class ServiceProvider extends BaseServiceProvider implements DeferrableProvider
                 $isDownForMaintenance
             );
         });
+        $this->app->alias('kafka.worker', Worker::class);
     }
 
     /**
@@ -240,6 +241,7 @@ class ServiceProvider extends BaseServiceProvider implements DeferrableProvider
             'kafka.topicConf',
             // kafka
             'kafka',
+            'kafka.worker',
             'kafka.factory',
             'kafka.connection',
         ];

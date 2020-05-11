@@ -5,12 +5,13 @@ namespace Aplr\Kafkaesk\Console;
 use Illuminate\Support\Carbon;
 use Illuminate\Console\Command;
 use Illuminate\Contracts\Cache\Repository as Cache;
+
 use Aplr\Kafkaesk\Worker;
 use Aplr\Kafkaesk\WorkerOptions;
 use Aplr\Kafkaesk\Processor\Message;
+use Aplr\Kafkaesk\Events\MessageFailed;
 use Aplr\Kafkaesk\Events\MessageProcessed;
 use Aplr\Kafkaesk\Events\MessageProcessing;
-use Aplr\Kafkaesk\Events\MessageProcessingFailed;
 
 class ConsumeCommand extends Command
 {
@@ -19,7 +20,7 @@ class ConsumeCommand extends Command
      *
      * @var string
      */
-    protected $signature = 'queue:work
+    protected $signature = 'kafka:consume
                             {connection? : The name of the kafka connection to consume}
                             {--topic= : The names of the topics to consume}
                             {--once : Only process the next job on the queue}
@@ -129,7 +130,6 @@ class ConsumeCommand extends Command
             $this->option('memory'),
             $this->option('timeout'),
             $this->option('sleep'),
-            $this->option('tries'),
             $this->option('force'),
             $this->option('stop-when-empty')
         );
@@ -150,7 +150,7 @@ class ConsumeCommand extends Command
             $this->writeOutput($event->message, 'success');
         });
 
-        $this->laravel['events']->listen(MessageProcessingFailed::class, function ($event) {
+        $this->laravel['events']->listen(MessageFailed::class, function ($event) {
             $this->writeOutput($event->message, 'failed');
         });
     }
@@ -201,7 +201,7 @@ class ConsumeCommand extends Command
      */
     protected function getTopic($connection)
     {
-        return $this->option('queue') ?: $this->laravel['config']->get(
+        return $this->option('topic') ?: $this->laravel['config']->get(
             "kafka.connections.{$connection}.topic",
             'default'
         );

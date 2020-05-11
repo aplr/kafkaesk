@@ -28,8 +28,8 @@ class Message extends KafkaMessage
     public static function wrap(KafkaMessage $message): Message
     {
         return new static(
-            $message->getKey(),
             $message->getTopic(),
+            $message->getKey(),
             $message->getPayload(),
             $message->getPartition(),
             $message->getOffset(),

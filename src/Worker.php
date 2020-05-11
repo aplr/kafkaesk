@@ -8,10 +8,10 @@ use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Contracts\Cache\Repository as CacheContract;
 use Aplr\Kafkaesk\Contracts\Factory;
+use Aplr\Kafkaesk\Events\MessageFailed;
 use Aplr\Kafkaesk\Events\WorkerStopping;
 use Aplr\Kafkaesk\Events\MessageProcessed;
 use Aplr\Kafkaesk\Events\MessageProcessing;
-use Aplr\Kafkaesk\Events\MessageExceptionOccured;
 use Aplr\Kafkaesk\Processor\Message as ProcessorMessage;
 
 class Worker
@@ -138,8 +138,10 @@ class Worker
             // process the message. Otherwise, we will need to sleep the worker so
             // no more messages are processed until they should be processed.
             if ($message) {
+                echo "RECEIVED: '{$message->getPayload()}'\n";
                 $this->processMessage($message, $consumer, $connectionName);
             } else {
+                echo "RECEIVED NOTHING, SLEEP\n";
                 $this->sleep($options->sleep);
             }
 
@@ -266,7 +268,7 @@ class Worker
      *
      * @return \Aplr\Kafkaesk\Processor\Message|null
      */
-    protected function getNextMessage(Consumer $consumer): ProcessorMessage
+    protected function getNextMessage(Consumer $consumer): ?ProcessorMessage
     {
         try {
             if (null !== ($message = $consumer->receive())) {
@@ -279,6 +281,8 @@ class Worker
 
             $this->sleep(1);
         }
+
+        return null;
     }
 
     /**
@@ -370,7 +374,7 @@ class Worker
         Consumer $consumer,
         Throwable $e
     ) {
-        $this->raiseExceptionOccurredMessageEvent(
+        $this->raiseFailedMessageEvent(
             $connectionName,
             $message,
             $e
@@ -426,12 +430,12 @@ class Worker
      *
      * @return void
      */
-    protected function raiseExceptionOccurredMessageEvent(
+    protected function raiseFailedMessageEvent(
         string $connectionName,
         ProcessorMessage $message,
         Throwable $e
     ) {
-        $this->events->dispatch(new MessageExceptionOccured(
+        $this->events->dispatch(new MessageFailed(
             $connectionName,
             $message,
             $e

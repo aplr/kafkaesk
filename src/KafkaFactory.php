@@ -66,10 +66,6 @@ class KafkaFactory
      */
     public function makeConsumer(array $topics, array $config): Consumer
     {
-        /** @var TopicConf $topicConf */
-        $topicConf = $this->app->makeWith('kafka.topicConf', []);
-        $topicConf->set('auto.offset.reset', $config['auto_offset_reset']);
-
         /** @var Conf $conf */
         $conf = $this->app->makeWith('kafka.conf', []);
 
@@ -84,7 +80,7 @@ class KafkaFactory
         $conf->set('metadata.broker.list', $config['brokers']);
         $conf->set('enable.auto.commit', $config['auto_commit']);
         $conf->set('offset.store.method', $config['offset_store_method']);
-        $conf->setDefaultTopicConf($topicConf);
+        $conf->set('auto.offset.reset', $config['auto_offset_reset']);
 
         $conf->setRebalanceCb(function (KafkaConsumer $kafka, $err, array $partitions = null) {
             $prettyPartitions = array_map(function (TopicPartition $partition) {

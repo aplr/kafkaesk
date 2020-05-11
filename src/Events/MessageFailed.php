@@ -5,7 +5,7 @@ namespace Aplr\Kafkaesk\Events;
 use Throwable;
 use Aplr\Kafkaesk\Processor\Message;
 
-class MessageExceptionOccured
+class MessageFailed
 {
     /**
      * The connection name.

@@ -33,13 +33,6 @@ class WorkerOptions
     public $sleep;
 
     /**
-     * The maximum amount of times a message may be attempted.
-     *
-     * @var int
-     */
-    public $maxTries;
-
-    /**
      * Indicates if the worker should run in maintenance mode.
      *
      * @var bool
@@ -60,7 +53,6 @@ class WorkerOptions
      * @param  int  $memory
      * @param  int  $timeout
      * @param  int  $sleep
-     * @param  int  $maxTries
      * @param  bool  $force
      * @param  bool  $stopWhenEmpty
      * @return void
@@ -70,7 +62,6 @@ class WorkerOptions
         $memory = 128,
         $timeout = 60,
         $sleep = 3,
-        $maxTries = 1,
         $force = false,
         $stopWhenEmpty = false
     ) {
@@ -79,7 +70,6 @@ class WorkerOptions
         $this->force = $force;
         $this->memory = $memory;
         $this->timeout = $timeout;
-        $this->maxTries = $maxTries;
         $this->stopWhenEmpty = $stopWhenEmpty;
     }
 }

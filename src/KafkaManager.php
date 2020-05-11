@@ -93,7 +93,7 @@ class KafkaManager extends AbstractManager implements Factory, BindsProcessors
     {
         $name = $name ?: $this->getDefaultConnection();
 
-        return $this->getNamedConfig('connections', 'Adapter', $name);
+        return $this->getNamedConfig('connections', 'Connection', $name);
     }
 
     /**

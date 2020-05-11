@@ -10,7 +10,7 @@ class Message
     /**
      * The message key
      *
-     * @var string
+     * @var string|null
      */
     private $key;
 
@@ -52,16 +52,16 @@ class Message
     /**
      * Message constructor
      *
-     * @param string $key
      * @param string $topic
+     * @param string|null $key
      * @param string|array|null $payload
      * @param int|null $partition
      * @param int|null $offset
      * @param int|null $timestamp
      */
     public function __construct(
-        string $key,
         string $topic,
+        ?string $key,
         $payload,
         $partition = null,
         $offset = null,
@@ -69,9 +69,9 @@ class Message
     ) {
         $this->key = $key;
         $this->topic = $topic;
+        $this->offset = $offset;
         $this->payload = $payload;
         $this->partition = $partition;
-        $this->offset = $offset;
         $this->timestamp = $timestamp;
     }
 
@@ -84,8 +84,8 @@ class Message
     public static function from(KafkaMessage $message): Message
     {
         return new static(
-            $message->key,
             $message->topic_name,
+            $message->key,
             $message->payload,
             $message->partition,
             $message->offset,
@@ -96,9 +96,9 @@ class Message
     /**
      * Returns the key
      *
-     * @return string
+     * @return string|null
      */
-    public function getKey(): string
+    public function getKey(): ?string
     {
         return $this->key;
     }

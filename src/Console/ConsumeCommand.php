@@ -5,7 +5,6 @@ namespace Aplr\Kafkaesk\Console;
 use Illuminate\Support\Carbon;
 use Illuminate\Console\Command;
 use Illuminate\Contracts\Cache\Repository as Cache;
-
 use Aplr\Kafkaesk\Worker;
 use Aplr\Kafkaesk\WorkerOptions;
 use Aplr\Kafkaesk\Processor\Message;

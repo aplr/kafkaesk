@@ -412,11 +412,15 @@ class Worker
         TopicNotBoundException $e
     ) {
         if ($this->shouldIgnoreWhenUnbound($connectionName)) {
-            return $this->raiseIgnoredMessageEvent(
+            $this->raiseIgnoredMessageEvent(
                 $connectionName,
                 $message,
                 $e
             );
+
+            $consumer->reject($message);
+
+            return;
         }
 
         $this->raiseFailedMessageEvent(
@@ -491,7 +495,7 @@ class Worker
     protected function config(string $connectionName, string $option, $default = null)
     {
         $connection = $this->manager->connection($connectionName);
-        
+
         return $connection ? Arr::get($connection->getConfig(), $option, $default) : null;
     }
 

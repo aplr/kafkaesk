@@ -2,6 +2,7 @@
 
 namespace Aplr\Kafkaesk;
 
+use Throwable;
 use InvalidArgumentException;
 use Psr\Log\LoggerInterface;
 use Psr\Container\ContainerInterface;
@@ -93,8 +94,8 @@ class Processor implements BindsProcessors
 
             // Process the message using the processor
             $processor->process($message);
-        } catch (TopicNotBoundException $e) {
-            $this->log->error("[Kafka] Putting message back to the queue because of error: {$e->getMessage()}");
+        } catch (Throwable $e) {
+            $this->log->error("[Kafka] Error while processing a message: '{$e->getMessage()}'");
             throw $e;
         }
     }

@@ -175,14 +175,14 @@ class Consumer
                 return Message::from($message);
                 // If we've got a PARTITION_EOF, make an info log and return null
             case RD_KAFKA_RESP_ERR__PARTITION_EOF:
-                $this->log->info("[Kafka] End of partition. Waiting for more messages to come in.", [
+                $this->log->debug("[Kafka] End of partition. Waiting for more messages to come in.", [
                     'topic' => $message->topic_name,
                     'partition' => $message->partition
                 ]);
                 return null;
                 // If we've got a TIMED_OUT, make an info log and return null
             case RD_KAFKA_RESP_ERR__TIMED_OUT:
-                $this->log->info("[Kafka] Timed out.", [
+                $this->log->debug("[Kafka] Timed out.", [
                     'topic' => $message->topic_name,
                     'partition' => $message->partition
                 ]);

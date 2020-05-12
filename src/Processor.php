@@ -68,7 +68,11 @@ class Processor implements BindsProcessors
     }
 
     /**
-     * @inheritDoc
+     * Returns true, if a processor has been bound
+     * to the topic with the given name, false otherwise.
+     *
+     * @param  string $topic
+     * @return boolean
      */
     public function has(string $topic)
     {

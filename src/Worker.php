@@ -12,7 +12,9 @@ use Aplr\Kafkaesk\Events\MessageFailed;
 use Aplr\Kafkaesk\Events\WorkerStopping;
 use Aplr\Kafkaesk\Events\MessageProcessed;
 use Aplr\Kafkaesk\Events\MessageProcessing;
+use Aplr\Kafkaesk\Exceptions\TopicNotBoundException;
 use Aplr\Kafkaesk\Processor\Message as ProcessorMessage;
+use Illuminate\Support\Arr;
 
 class Worker
 {
@@ -113,7 +115,7 @@ class Worker
         $lastRestart = $this->getTimestampOfLastQueueRestart();
 
         $connection = $this->manager->connection($connectionName);
-        $consumer = $connection->consumer($this->getTopics($topic));
+        $consumer = $connection->consumer($this->getTopics($topic), true);
 
         while (true) {
             // Before consuming any messages, we will make sure this topic is not paused
@@ -138,10 +140,8 @@ class Worker
             // process the message. Otherwise, we will need to sleep the worker so
             // no more messages are processed until they should be processed.
             if ($message) {
-                echo "RECEIVED: '{$message->getPayload()}'\n";
                 $this->processMessage($message, $consumer, $connectionName);
             } else {
-                echo "RECEIVED NOTHING, SLEEP\n";
                 $this->sleep($options->sleep);
             }
 
@@ -246,7 +246,7 @@ class Worker
     public function processNextMessage(string $connectionName, string $topic, WorkerOptions $options)
     {
         $connection = $this->manager->connection($connectionName);
-        $consumer = $connection->consumer($this->getTopics($topic));
+        $consumer = $connection->consumer($this->getTopics($topic), true);
 
         $message = $this->getNextMessage($consumer);
 
@@ -351,6 +351,8 @@ class Worker
             }
 
             $this->raiseAfterMessageEvent($connectionName, $message);
+        } catch (TopicNotBoundException $e) {
+            $this->handleProcessorException($connectionName, $message, $consumer, $e);
         } catch (Throwable $e) {
             $this->handleMessageException($connectionName, $message, $consumer, $e);
         }
@@ -384,10 +386,94 @@ class Worker
         // so it is not lost entirely. This'll let the job be retried at a later time by
         // another listener (or this same one). We will re-throw this exception after.
         if (!$message->isRejected() && !$message->isRequeued()) {
-            $consumer->reject($message, true);
+            $consumer->reject($message, $this->shouldRequeueOnError($connectionName));
         }
 
         throw $e;
+    }
+
+    protected function handleProcessorException(
+        string $connectionName,
+        ProcessorMessage $message,
+        Consumer $consumer,
+        TopicNotBoundException $e
+    ) {
+        if ($this->shouldIgnoreWhenUnbound($connectionName)) {
+            return;
+        }
+
+        $this->raiseFailedMessageEvent(
+            $connectionName,
+            $message,
+            $e
+        );
+
+        if (!$message->isRejected() && !$message->isRequeued()) {
+            $consumer->reject($message, $this->shouldRequeueWhenUnbound($connectionName));
+        }
+
+        throw $e;
+    }
+
+    /**
+     * Returns true if the error_action is configured as 'requeue'
+     * for the given connection, false otherwise.
+     *
+     * @param string $connectionName
+     * @return boolean
+     */
+    protected function shouldRequeueOnError(string $connectionName): bool
+    {
+        return $this->config($connectionName, 'error_action') === 'requeue';
+    }
+
+    /**
+     * Returns true if the unhandled_action for the given connection
+     * is 'requeue', false otherwise.
+     *
+     * @param string $connectionName
+     * @return boolean
+     */
+    protected function shouldRequeueWhenUnbound(string $connectionName): bool
+    {
+        return $this->config($connectionName, 'unhandled_action' === 'requeue');
+    }
+
+    /**
+     * Returns true if the unhandled_action for the given connection
+     * is 'fail', false otherwise.
+     *
+     * @param string $connectionName
+     * @return boolean
+     */
+    protected function shouldFailWhenUnbound(string $connectionName): bool
+    {
+        return $this->config($connectionName, 'unhandled_action' === 'fail');
+    }
+
+    /**
+     * Returns true if the unhandled_action for the given connection
+     * is 'ignore', false otherwise.
+     *
+     * @param string $connectionName
+     * @return boolean
+     */
+    protected function shouldIgnoreWhenUnbound(string $connectionName): bool
+    {
+        return $this->config($connectionName, 'unhandled_action' === 'ignore');
+    }
+
+    /**
+     * Returns the configuration option for the given connection name
+     *
+     * @param  string  $connectionName
+     * @param  string|int|null  $option
+     * @param  mixed  $default
+     * @return mixed
+     */
+    protected function config(string $connectionName, string $option, $default = null)
+    {
+        return Arr::get($this->manager->connection($connectionName)->getConfig(), $option, $default);
     }
 
     /**

@@ -5,6 +5,7 @@ namespace Aplr\Kafkaesk;
 use Psr\Log\LoggerInterface;
 use Aplr\Kafkaesk\Processor\ProcessesMessages;
 use Aplr\Kafkaesk\Contracts\Kafka as KafkaContract;
+use Aplr\Kafkaesk\Exceptions\TopicNotBoundException;
 use Aplr\Kafkaesk\Processor\Message as ProcessorMessage;
 
 class Kafka implements KafkaContract
@@ -82,7 +83,7 @@ class Kafka implements KafkaContract
             $this->processor->bind($topic, $processor);
         }
 
-        $consumer = $this->subscribe($topic);
+        $consumer = $this->subscribe($topic, true);
 
         // Start the long running consumer
         while (true) {
@@ -98,26 +99,52 @@ class Kafka implements KafkaContract
     }
 
     /**
-     * Create a consumer instance for the given topic
+     * Create a consumer instance for the given topic. If
+     * $checkUnboundTopics is set to true, it is ensured
+     * that topics have a message processor bound to it.
      *
      * @param  string|array|null $topic
+     * @param  boolean  $checkUnboundTopics
+     *
+     * @throws \Aplr\Kafkaesk\Exceptions\TopicNotBoundException
+     *
      * @return \Aplr\Kafkaesk\Consumer
      */
-    public function consumer($topic = null): Consumer
+    public function consumer($topic = null, bool $checkUnboundTopics = false): Consumer
     {
-        return $this->subscribe($topic);
+        return $this->subscribe($topic, $checkUnboundTopics);
     }
 
     /**
-     * Create a consumer and bind it to the given topic(s).
-     * If no topics are given, the connections' default topics are used.
+     * Returns the connection configuration
+     *
+     * @return array
+     */
+    public function getConfig(): array
+    {
+        return $this->config();
+    }
+
+    /**
+     * Create a consumer and bind it to the given topic(s). If no
+     * topics are given, the connections' default topics are used.
+     * If $checkUnboundTopics is set to true, it is ensured that
+     * given topics have a message processor bound to it.
      *
      * @param  string|array|null $topic
+     * @param  boolean  $checkUnboundTopics
+     *
+     * @throws \Aplr\Kafkaesk\Exceptions\TopicNotBoundException
+     *
      * @return \Aplr\Kafkaesk\Consumer
      */
-    private function subscribe($topic): Consumer
+    private function subscribe($topic, bool $checkUnboundTopics = false): Consumer
     {
         $topics = $this->getTopics($topic);
+
+        if ($checkUnboundTopics && $this->shouldFailOnUnboundTopics()) {
+            $this->enforceProcessorsForTopics($topics);
+        }
 
         $consumer = $this->factory->makeConsumer($topics, $this->config);
         $consumer->subscribe();
@@ -162,5 +189,36 @@ class Kafka implements KafkaContract
         }
         
         return is_array($topic) ? $topic : [$topic];
+    }
+
+    /**
+     * Ensures that a processor is available for
+     * every given topic by throwing an exception
+     * if this is not the case.
+     *
+     * @param  string[] $topics
+     *
+     * @throws \Aplr\Kafkaesk\Exceptions\TopicNotBoundException
+     *
+     * @return void
+     */
+    private function enforceProcessorsForTopics(array $topics): void
+    {
+        foreach ($topics as $topic) {
+            if (!$this->processor->has($topic)) {
+                throw new TopicNotBoundException($topic);
+            }
+        }
+    }
+
+    /**
+     * Returns true if the consumer should fail on
+     * unbound topics, false otherwise.
+     *
+     * @return boolean
+     */
+    private function shouldFailOnUnboundTopics()
+    {
+        return $this->config['unhandled_action'] === 'fail';
     }
 }

@@ -68,6 +68,14 @@ class Processor implements BindsProcessors
     }
 
     /**
+     * @inheritDoc
+     */
+    public function has(string $topic)
+    {
+        return isset($this->processors[$topic]);
+    }
+
+    /**
      * Process the given message
      *
      * @param \Aplr\Kafkaesk\Processor\Message $message

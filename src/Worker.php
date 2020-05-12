@@ -16,6 +16,7 @@ use Aplr\Kafkaesk\Events\MessageProcessing;
 use Aplr\Kafkaesk\Exceptions\TopicNotBoundException;
 use Aplr\Kafkaesk\Processor\Message as ProcessorMessage;
 use Illuminate\Support\Arr;
+use Psr\Log\LoggerInterface;
 
 class Worker
 {
@@ -62,6 +63,13 @@ class Worker
     protected $isDownForMaintenance;
 
     /**
+     * The logger instance.
+     *
+     * @var \Psr\Log\LoggerInterface
+     */
+    protected $log;
+
+    /**
      * Indicates if the worker should exit.
      *
      * @var bool
@@ -83,14 +91,17 @@ class Worker
      * @param  \Illuminate\Contracts\Events\Dispatcher  $events
      * @param  \Illuminate\Contracts\Debug\ExceptionHandler  $exceptions
      * @param  callable  $isDownForMaintenance
+     * @param  \Psr\Log\LoggerInterface
      */
     public function __construct(
         Factory $manager,
         Processor $processor,
         Dispatcher $events,
         ExceptionHandler $exceptions,
-        callable $isDownForMaintenance
+        callable $isDownForMaintenance,
+        LoggerInterface $log
     ) {
+        $this->log = $log;
         $this->events = $events;
         $this->manager = $manager;
         $this->processor = $processor;

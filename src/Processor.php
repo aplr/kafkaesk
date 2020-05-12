@@ -95,7 +95,7 @@ class Processor implements BindsProcessors
             // Process the message using the processor
             $processor->process($message);
         } catch (Throwable $e) {
-            $this->log->error("[Kafka] Error while processing a message: '{$e->getMessage()}'");
+            $this->log->error("[Kafka] Error while processing message: '{$e->getMessage()}'");
             throw $e;
         }
     }

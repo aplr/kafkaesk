@@ -175,6 +175,8 @@ class ConsumeCommand extends Command
                 return $this->writeStatus($message, 'Processed', 'info');
             case 'failed':
                 return $this->writeStatus($message, 'Failed', 'error');
+            case 'ignored':
+                return $this->writeStatus($message, 'Ignored', 'comment');
         }
     }
 
@@ -193,7 +195,7 @@ class ConsumeCommand extends Command
             Carbon::now()->format('Y-m-d H:i:s'),
             $message->getKey(),
             str_pad("{$status}:", 11),
-            $message->getKey()
+            $message->getPayload()
         ));
     }
 

@@ -200,7 +200,8 @@ class ServiceProvider extends BaseServiceProvider implements DeferrableProvider
                 $app['kafka.processor'],
                 $app['events'],
                 $app[ExceptionHandler::class],
-                $isDownForMaintenance
+                $isDownForMaintenance,
+                $app['log']
             );
         });
         $this->app->alias('kafka.worker', Worker::class);

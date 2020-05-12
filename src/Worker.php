@@ -453,7 +453,7 @@ class Worker
      */
     protected function shouldRequeueWhenUnbound(string $connectionName): bool
     {
-        return $this->config($connectionName, 'unhandled_action' === 'requeue');
+        return $this->config($connectionName, 'unhandled_action') === 'requeue';
     }
 
     /**
@@ -465,7 +465,7 @@ class Worker
      */
     protected function shouldFailWhenUnbound(string $connectionName): bool
     {
-        return $this->config($connectionName, 'unhandled_action' === 'fail');
+        return $this->config($connectionName, 'unhandled_action') === 'fail';
     }
 
     /**
@@ -477,7 +477,7 @@ class Worker
      */
     protected function shouldIgnoreWhenUnbound(string $connectionName): bool
     {
-        return $this->config($connectionName, 'unhandled_action' === 'ignore');
+        return $this->config($connectionName, 'unhandled_action') === 'ignore';
     }
 
     /**
@@ -490,7 +490,9 @@ class Worker
      */
     protected function config(string $connectionName, string $option, $default = null)
     {
-        return Arr::get($this->manager->connection($connectionName)->getConfig(), $option, $default);
+        $connection = $this->manager->connection($connectionName);
+        
+        return $connection ? Arr::get($connection->getConfig(), $option, $default) : null;
     }
 
     /**

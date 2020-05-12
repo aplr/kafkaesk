@@ -37,10 +37,19 @@ return [
              * Action which should be used when a message is consumed without
              * a processor registered. Available options are:
              *  - 'ignore': consume the message and ignore that no processor is available,
-             *  - 'fail': fail the consumer if no processor for the consumed topic exists, and
-             *  - 'requeue': put the message back onto the queue
+             *  - 'requeue': put the message back onto the topic, or
+             *  - 'fail': fail the consumer
              */
             'unhandled_action' => env('KAFKA_ACTION_UNHANDLED', 'ignore'),
+
+            /**
+             * Action which should be used when a message is consumed with
+             * an error. Available options are:
+             *  - 'ignore': consume the message and ignore the error,
+             *  - 'requeue': put the message back onto the topic, or
+             *  - 'fail': fail the consumer
+             */
+            'error_action' => env('KAFKA_ACTION_ERROR', 'ignore'),
 
             /**
              * Determine the number of seconds to sleep if there's an error communicating with kafka

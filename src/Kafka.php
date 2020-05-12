@@ -122,7 +122,7 @@ class Kafka implements KafkaContract
      */
     public function getConfig(): array
     {
-        return $this->config();
+        return $this->config;
     }
 
     /**

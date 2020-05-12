@@ -9,6 +9,7 @@ use Aplr\Kafkaesk\Worker;
 use Aplr\Kafkaesk\WorkerOptions;
 use Aplr\Kafkaesk\Processor\Message;
 use Aplr\Kafkaesk\Events\MessageFailed;
+use Aplr\Kafkaesk\Events\MessageIgnored;
 use Aplr\Kafkaesk\Events\MessageProcessed;
 use Aplr\Kafkaesk\Events\MessageProcessing;
 
@@ -151,6 +152,10 @@ class ConsumeCommand extends Command
 
         $this->laravel['events']->listen(MessageFailed::class, function ($event) {
             $this->writeOutput($event->message, 'failed');
+        });
+
+        $this->laravel['events']->listen(MessageIgnored::class, function ($event) {
+            $this->writeOutput($event->message, 'ignored');
         });
     }
 

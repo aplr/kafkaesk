@@ -9,6 +9,7 @@ use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Contracts\Cache\Repository as CacheContract;
 use Aplr\Kafkaesk\Contracts\Factory;
 use Aplr\Kafkaesk\Events\MessageFailed;
+use Aplr\Kafkaesk\Events\MessageIgnored;
 use Aplr\Kafkaesk\Events\WorkerStopping;
 use Aplr\Kafkaesk\Events\MessageProcessed;
 use Aplr\Kafkaesk\Events\MessageProcessing;
@@ -392,6 +393,18 @@ class Worker
         throw $e;
     }
 
+    /**
+     * Handle exceptions raised from unbound topics.
+     *
+     * @param  string  $connectionName
+     * @param  \Aplr\Kafkaesk\Processor\Message  $message
+     * @param  \Aplr\Kafkaesk\Consumer  $consumer
+     * @param  \Aplr\Kafkaesk\Exceptions\TopicNotBoundException  $e
+     *
+     * @throws \Aplr\Kafkaesk\Exceptions\TopicNotBoundException
+     *
+     * @return void
+     */
     protected function handleProcessorException(
         string $connectionName,
         ProcessorMessage $message,
@@ -399,7 +412,11 @@ class Worker
         TopicNotBoundException $e
     ) {
         if ($this->shouldIgnoreWhenUnbound($connectionName)) {
-            return;
+            return $this->raiseIgnoredMessageEvent(
+                $connectionName,
+                $message,
+                $e
+            );
         }
 
         $this->raiseFailedMessageEvent(
@@ -522,6 +539,27 @@ class Worker
         Throwable $e
     ) {
         $this->events->dispatch(new MessageFailed(
+            $connectionName,
+            $message,
+            $e
+        ));
+    }
+
+    /**
+     * Raise the ignored kafka message event.
+     *
+     * @param  string  $connectionName
+     * @param  \Aplr\Kafkaesk\Processor\Message  $message
+     * @param  \Throwable  $e
+     *
+     * @return void
+     */
+    protected function raiseIgnoredMessageEvent(
+        string $connectionName,
+        ProcessorMessage $message,
+        Throwable $e
+    ) {
+        $this->events->dispatch(new MessageIgnored(
             $connectionName,
             $message,
             $e

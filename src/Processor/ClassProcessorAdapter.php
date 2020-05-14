@@ -45,7 +45,7 @@ class ClassProcessorAdapter implements ProcessesMessages
     /**
      * @inheritDoc
      */
-    public function process(Message $message)
+    public function process(Message $message): void
     {
         // Resolve the processor instance
         $processor = $this->resolve();

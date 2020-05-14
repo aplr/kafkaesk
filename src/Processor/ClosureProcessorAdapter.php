@@ -24,7 +24,7 @@ class ClosureProcessorAdapter implements ProcessesMessages
     /**
      * @inheritDoc
      */
-    public function process(Message $message)
+    public function process(Message $message): void
     {
         ($this->closure)($message);
     }

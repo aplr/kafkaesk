@@ -120,7 +120,7 @@ class KafkaFactory
             if (RD_KAFKA_RESP_ERR__TRANSPORT === $code) {
                 $this->log->warning('[Kafka] Transport failure. Check connection to brokers.', $fields);
             } else {
-                $this->log->debug("Consumer Error: {rd_kafka_err2str($code)} - {$message}");
+                $this->log->debug("[Kafka] Consumer Error: {rd_kafka_err2str($code)} - {$message}");
             }
         });
 

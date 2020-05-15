@@ -67,6 +67,10 @@ class Kafka implements KafkaContract
      */
     public function produce(Message $message): void
     {
+        $this->log->debug("[Kafka] Producing message on topic '{$message->getTopic()}'.", [
+            'message' => $message
+        ]);
+
         $this->producer->produce($message);
     }
 

@@ -15,7 +15,7 @@ return [
             /**
              * The group of where the consumer in resides.
              */
-            'consumer_group_id' => env('KAFKA_CONSUMER_GROUP_ID', 'laravel_queue'),
+            'consumer_group_id' => env('KAFKA_CONSUMER_GROUP_ID', 'laravel'),
 
             /**
              * The consumer timeout

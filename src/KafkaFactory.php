@@ -24,15 +24,21 @@ class KafkaFactory
     private $app;
 
     /**
+     * @var boolean
+     */
+    private $pcntlSigProcMaskEnabled;
+
+    /**
      * KafkaFactory constructor.
      *
      * @param \Illuminate\Container\Container  $app
      * @param \Psr\Log\LoggerInterface  $log
      */
-    public function __construct(Container $app, LoggerInterface $log)
+    public function __construct(Container $app, LoggerInterface $log, array $options)
     {
         $this->app = $app;
         $this->log = $log;
+        $this->pcntlSigProcMaskEnabled = $options['pcntlSigProcMaskEnabled'] ?? false;
     }
 
     /**
@@ -46,8 +52,27 @@ class KafkaFactory
     {
         /** @var Conf $conf */
         $conf = new Conf();
-        $conf->set('log_level', (string) LOG_DEBUG);
         $conf->set('debug', 'all');
+        $conf->set('log_level', (string) LOG_EMERG);
+        $conf->setErrorCb(function (KafkaProducer $producer, int $code, string $message) {
+
+            $fields = [
+                'code' => $code,
+                'message' => $message,
+            ];
+
+            if (RD_KAFKA_RESP_ERR__TRANSPORT === $code) {
+                $this->log->warning('[Kafka] Transport failure. Check connection to brokers.', $fields);
+            } else {
+                $this->log->debug("[Kafka] Consumer Error: {rd_kafka_err2str($code)} - {$message}");
+            }
+        });
+
+        if ($this->pcntlSigProcMaskEnabled) {
+            $conf->set('internal.termination.signal', SIGIO);
+        } else {
+            $conf->set('queue.buffering.max.ms', 10);
+        }
 
         /** @var KafkaProducer $producer */
         $producer = $this->app->makeWith('kafka.producer', ['conf' => $conf]);

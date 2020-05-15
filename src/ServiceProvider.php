@@ -19,6 +19,13 @@ use Aplr\Kafkaesk\Console\RestartCommand;
 class ServiceProvider extends BaseServiceProvider implements DeferrableProvider
 {
     /**
+     * Is sig enabled
+     *
+     * @var boolean
+     */
+    private $pcntlSigProcMaskEnabled;
+
+    /**
      * Bootstrap the application services.
      *
      * @return void
@@ -37,6 +44,7 @@ class ServiceProvider extends BaseServiceProvider implements DeferrableProvider
      */
     public function register()
     {
+        $this->enablePcntlSigMask();
         $this->registerConfig();
         $this->registerDriver();
         $this->registerKafka();
@@ -112,7 +120,9 @@ class ServiceProvider extends BaseServiceProvider implements DeferrableProvider
     protected function registerFactory()
     {
         $this->app->singleton('kafka.factory', function (Container $app) {
-            return new KafkaFactory($app, $app['log']);
+            return new KafkaFactory($app, $app['log'], [
+                'pcntlSigProcMaskEnabled' => $this->pcntlSigProcMaskEnabled,
+            ]);
         });
         $this->app->alias('kafka.factory', KafkaFactory::class);
     }
@@ -225,6 +235,21 @@ class ServiceProvider extends BaseServiceProvider implements DeferrableProvider
         $manager->addConnector('kafka', function () use ($container) {
             return new KafkaConnector($container, $container['log']);
         });
+    }
+
+    /**
+     * Enable SigProcMask from Pcntl in order to reduce kafka delays
+     *
+     * @return void
+     */
+    private function enablePcntlSigMask()
+    {
+        $this->pcntlSigProcMaskEnabled = false;
+
+        if (function_exists('pcntl_sigprocmask')) {
+            pcntl_sigprocmask(SIG_BLOCK, array(SIGIO));
+            $this->pcntlSigProcMaskEnabled = true;
+        }
     }
 
     /**

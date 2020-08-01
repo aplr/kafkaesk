@@ -175,6 +175,17 @@ class Message
     }
 
     /**
+     * Set the message headers
+     *
+     * @param array|null $headers
+     * @return void
+     */
+    public function setHeaders(array $headers = null)
+    {
+        $this->headers = $headers;
+    }
+
+    /**
      * Returns a TopicPartition
      *
      * @return \RdKafka\TopicPartition

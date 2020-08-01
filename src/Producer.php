@@ -33,12 +33,13 @@ class Producer
     {
         $topic = $this->producer->newTopic($message->getTopic());
 
-        $topic->produce(
+        $topic->producev(
             $message->getPartition(),
             0,
             $message->getPayload(),
-            $message->getKey()
-        );
+            $message->getKey(),
+            $message->getHeaders()
+        )
 
         $this->producer->flush(200);
     }

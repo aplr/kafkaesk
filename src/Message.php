@@ -50,6 +50,13 @@ class Message
     private $timestamp;
 
     /**
+     * Message headers
+     *
+     * @var array|null
+     */
+    private $headers;
+
+    /**
      * Message constructor
      *
      * @param string $topic
@@ -58,6 +65,7 @@ class Message
      * @param int|null $partition
      * @param int|null $offset
      * @param int|null $timestamp
+     * @param int|null $headers
      */
     public function __construct(
         string $topic,
@@ -65,7 +73,8 @@ class Message
         $payload,
         $partition = null,
         $offset = null,
-        $timestamp = null
+        $timestamp = null,
+        $headers = null
     ) {
         $this->key = $key;
         $this->topic = $topic;
@@ -73,6 +82,7 @@ class Message
         $this->payload = $payload;
         $this->partition = $partition;
         $this->timestamp = $timestamp;
+        $this->headers = $headers;
     }
 
     /**
@@ -89,7 +99,8 @@ class Message
             $message->payload,
             $message->partition,
             $message->offset,
-            $message->timestamp
+            $message->timestamp,
+            $message->headers
         );
     }
 
@@ -151,6 +162,16 @@ class Message
     public function getTimestamp()
     {
         return $this->timestamp;
+    }
+
+    /**
+     * Returns the headers
+     *
+     * @return array|null
+     */
+    public function getHeaders()
+    {
+        return $this->headers;
     }
 
     /**

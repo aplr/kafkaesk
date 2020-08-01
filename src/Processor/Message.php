@@ -33,7 +33,8 @@ class Message extends KafkaMessage
             $message->getPayload(),
             $message->getPartition(),
             $message->getOffset(),
-            $message->getTimestamp()
+            $message->getTimestamp(),
+            $message->getHeaders()
         );
     }
 

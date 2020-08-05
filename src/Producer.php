@@ -39,7 +39,7 @@ class Producer
             $message->getPayload(),
             $message->getKey(),
             $message->getHeaders()
-        )
+        );
 
         $this->producer->flush(200);
     }

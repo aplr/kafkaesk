@@ -17,7 +17,7 @@ class ServiceProvider extends BaseServiceProvider
     public function boot()
     {
         /** @var KafkaManager */
-        $manager = $this->app->make('kafka');
+        $manager = $this->app->make('kafka.manager');
 
         collect($this->process)->each(function ($processor, $topic) use ($manager) {
             $manager->bind($topic, $processor);

@@ -150,8 +150,9 @@ class ServiceProvider extends BaseServiceProvider implements DeferrableProvider
      */
     protected function registerManager()
     {
-        $this->app->singleton('kafka', function (Container $app) {
+        $this->app->singleton('kafka.manager', function (Container $app) {
             return new KafkaManager(
+                $app,
                 $app['config'],
                 $app['kafka.factory'],
                 $app['kafka.processor'],
@@ -159,8 +160,8 @@ class ServiceProvider extends BaseServiceProvider implements DeferrableProvider
             );
         });
 
-        $this->app->alias('kafka', KafkaManager::class);
-        $this->app->alias('kafka', Factory::class);
+        $this->app->alias('kafka.manager', KafkaManager::class);
+        $this->app->alias('kafka.manager', Factory::class);
     }
 
     /**
@@ -171,7 +172,7 @@ class ServiceProvider extends BaseServiceProvider implements DeferrableProvider
     protected function registerBindings()
     {
         $this->app->bind('kafka.connection', function (Container $app) {
-            return $app['kafka']->connection();
+            return $app['kafka.manager']->connection();
         });
 
         $this->app->alias('kafka.connection', Kafka::class);
@@ -206,7 +207,7 @@ class ServiceProvider extends BaseServiceProvider implements DeferrableProvider
             };
 
             return new Worker(
-                $app['kafka'],
+                $app['kafka.manager'],
                 $app['kafka.processor'],
                 $app['events'],
                 $app[ExceptionHandler::class],
@@ -233,7 +234,7 @@ class ServiceProvider extends BaseServiceProvider implements DeferrableProvider
     private function registerConnector($manager, $container)
     {
         $manager->addConnector('kafka', function () use ($container) {
-            return new KafkaConnector($container, $container['log']);
+            return new KafkaConnector($container['kafka.manager'], $container['log']);
         });
     }
 

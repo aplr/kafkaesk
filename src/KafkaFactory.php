@@ -3,7 +3,6 @@
 namespace Aplr\Kafkaesk;
 
 use RdKafka\Conf;
-use RdKafka\TopicConf;
 use RdKafka\KafkaConsumer;
 use RdKafka\TopicPartition;
 use RdKafka\Producer as KafkaProducer;
@@ -106,6 +105,12 @@ class KafkaFactory
         $conf->set('enable.auto.commit', $config['auto_commit']);
         $conf->set('offset.store.method', $config['offset_store_method']);
         $conf->set('auto.offset.reset', $config['auto_offset_reset']);
+
+        if (isset($config['rdkafka_conf']) && is_array($config['rdkafka_conf'])) {
+            foreach ($config['rdkafka_conf'] as $name => $value) {
+                $conf->set($name, $value);
+            }
+        }
 
         $conf->setRebalanceCb(function (KafkaConsumer $kafka, $err, array $partitions = null) {
             $prettyPartitions = array_map(function (TopicPartition $partition) {

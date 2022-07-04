@@ -73,6 +73,14 @@ class KafkaFactory
             $conf->set('queue.buffering.max.ms', 10);
         }
 
+        if (isset($config['rdkafka_conf']) && is_array($config['rdkafka_conf'])) {
+            foreach ($config['rdkafka_conf'] as $name => $value) {
+                $conf->set($name, $value);
+            }
+        }
+
+        $this->log->debug("[Kafka] makeProducer config:", ['config' => $conf->dump()]);
+
         /** @var KafkaProducer $producer */
         $producer = $this->app->makeWith('kafka.producer', ['conf' => $conf]);
         $producer->addBrokers($config['brokers']);
@@ -153,6 +161,8 @@ class KafkaFactory
                 $this->log->debug("[Kafka] Consumer Error: {rd_kafka_err2str($code)} - {$message}");
             }
         });
+
+        $this->log->debug("[Kafka] makeConsumer config:", ['config' => $conf->dump()]);
 
         $producer = $this->makeProducer($config);
 

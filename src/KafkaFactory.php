@@ -67,6 +67,13 @@ class KafkaFactory
             }
         });
 
+        if (array_key_exists('sasl_enable', $config) && true === $config['sasl_enable']) {
+            $conf->set('sasl.mechanisms', 'PLAIN');
+            $conf->set('sasl.username', $config['sasl_plain_username']);
+            $conf->set('sasl.password', $config['sasl_plain_password']);
+            $conf->set('ssl.ca.location', $config['ssl_ca_location']);
+        }
+
         if ($this->pcntlSigProcMaskEnabled) {
             $conf->set('internal.termination.signal', SIGIO);
         } else {

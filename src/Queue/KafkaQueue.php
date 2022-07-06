@@ -117,8 +117,8 @@ class KafkaQueue extends Queue implements QueueContract
             $pushRawCorrelationId = $this->getCorrelationId();
 
             $message = new Message(
-                $pushRawCorrelationId,
                 $topic,
+                $pushRawCorrelationId,
                 $payload,
                 RD_KAFKA_PARTITION_UA
             );
@@ -162,6 +162,7 @@ class KafkaQueue extends Queue implements QueueContract
             }
             
             return new KafkaJob(
+                $this->getContainer(),
                 $this,
                 $message,
                 $this->connectionName,

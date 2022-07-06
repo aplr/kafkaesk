@@ -3,6 +3,7 @@
 namespace Aplr\Kafkaesk\Queue;
 
 use Exception;
+use Illuminate\Contracts\Container\Container;
 use Illuminate\Support\Str;
 use Illuminate\Queue\Jobs\Job;
 use Illuminate\Queue\Jobs\JobName;
@@ -10,7 +11,6 @@ use Illuminate\Database\DetectsConcurrencyErrors;
 use Illuminate\Contracts\Queue\Job as JobContract;
 use Aplr\Kafkaesk\Message;
 use Aplr\Kafkaesk\Consumer;
-use Aplr\Kafkaesk\Queue\KafkaQueue;
 use Aplr\Kafkaesk\Exceptions\KafkaException;
 
 class KafkaJob extends Job implements JobContract
@@ -47,12 +47,14 @@ class KafkaJob extends Job implements JobContract
      * @param \Aplr\Kafkaesk\Consumer $consumer
      */
     public function __construct(
+        Container $container,
         KafkaQueue $connection,
         Message $message,
         $connectionName,
         $queue,
         Consumer $consumer
     ) {
+        $this->container = $container;
         $this->connection = $connection;
         $this->message = $message;
         $this->connectionName = $connectionName;

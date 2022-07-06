@@ -2,6 +2,7 @@
 
 namespace Aplr\Kafkaesk;
 
+use Illuminate\Contracts\Container\Container;
 use Psr\Log\LoggerInterface;
 use GrahamCampbell\Manager\AbstractManager;
 use Illuminate\Contracts\Config\Repository;
@@ -31,6 +32,7 @@ class KafkaManager extends AbstractManager implements Factory, BindsProcessors
      * @var \Psr\Log\LoggerInterface
      */
     protected $log;
+    private Container $container;
 
     /**
      * Create a new kafka manager instance.
@@ -41,11 +43,13 @@ class KafkaManager extends AbstractManager implements Factory, BindsProcessors
      * @param \Psr\Log\LoggerInterface  $log
      */
     public function __construct(
+        Container $container,
         Repository $config,
         KafkaFactory $factory,
         Processor $processor,
         LoggerInterface $log
     ) {
+        $this->container = $container;
         $this->config = $config;
         $this->factory = $factory;
         $this->processor = $processor;

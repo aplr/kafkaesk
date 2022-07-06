@@ -3,7 +3,6 @@
 namespace Aplr\Kafkaesk;
 
 use RdKafka\Conf;
-use RdKafka\TopicConf;
 use RdKafka\KafkaConsumer;
 use RdKafka\TopicPartition;
 use RdKafka\Producer as KafkaProducer;
@@ -68,11 +67,26 @@ class KafkaFactory
             }
         });
 
+        if (array_key_exists('sasl_enable', $config) && true === $config['sasl_enable']) {
+            $conf->set('sasl.mechanisms', 'PLAIN');
+            $conf->set('sasl.username', $config['sasl_plain_username']);
+            $conf->set('sasl.password', $config['sasl_plain_password']);
+            $conf->set('ssl.ca.location', $config['ssl_ca_location']);
+        }
+
         if ($this->pcntlSigProcMaskEnabled) {
             $conf->set('internal.termination.signal', SIGIO);
         } else {
             $conf->set('queue.buffering.max.ms', 10);
         }
+
+        if (isset($config['rdkafka_conf']) && is_array($config['rdkafka_conf'])) {
+            foreach ($config['rdkafka_conf'] as $name => $value) {
+                $conf->set($name, $value);
+            }
+        }
+
+        $this->log->debug("[Kafka] makeProducer config:", ['config' => $conf->dump()]);
 
         /** @var KafkaProducer $producer */
         $producer = $this->app->makeWith('kafka.producer', ['conf' => $conf]);
@@ -106,6 +120,12 @@ class KafkaFactory
         $conf->set('enable.auto.commit', $config['auto_commit']);
         $conf->set('offset.store.method', $config['offset_store_method']);
         $conf->set('auto.offset.reset', $config['auto_offset_reset']);
+
+        if (isset($config['rdkafka_conf']) && is_array($config['rdkafka_conf'])) {
+            foreach ($config['rdkafka_conf'] as $name => $value) {
+                $conf->set($name, $value);
+            }
+        }
 
         $conf->setRebalanceCb(function (KafkaConsumer $kafka, $err, array $partitions = null) {
             $prettyPartitions = array_map(function (TopicPartition $partition) {
@@ -148,6 +168,8 @@ class KafkaFactory
                 $this->log->debug("[Kafka] Consumer Error: {rd_kafka_err2str($code)} - {$message}");
             }
         });
+
+        $this->log->debug("[Kafka] makeConsumer config:", ['config' => $conf->dump()]);
 
         $producer = $this->makeProducer($config);
 

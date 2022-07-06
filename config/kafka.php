@@ -82,6 +82,15 @@ return [
              * SASL password for use with the PLAIN and SASL-SCRAM-.. mechanism
              */
             'sasl_plain_password' => env('KAFKA_SASL_PLAIN_PASSWORD'),
+
+            /**
+             * Custom rdkafka configuration variables
+             * https://github.com/edenhill/librdkafka/blob/master/CONFIGURATION.md
+             */
+            'rdkafka_conf' => [
+                'debug' => env('KAFKA_DEBUG', ''),
+            ],
+
         ],
 
     ],
